@@ -1,0 +1,46 @@
+# 愛傳時 App - 永久規則
+
+## 專案基本資訊
+App名稱：愛傳時（TimedMessenger）
+框架：Flutter / Dart
+平台：Android + iOS + Windows
+後端：Firebase（Auth + Firestore + FCM + Storage + Functions）
+本地儲存：SQLite（sqflite v4）
+專案路徑：C:\Users\w\StudioProjects\timed_messenger
+
+## 已完成模組
+✅ 模組① Auth：Google登入/登出/自動跳轉（lib/modules/auth/）
+✅ 模組② Messaging：Firestore雲端排程同步（lib/modules/messaging/）
+✅ SQLite本地排程（建立/刪除/重複）
+✅ AudioManager音效、VibrationManager震動
+✅ 11個時區支援
+
+## 架構規則（每次修改前必須遵守）
+1. 功能模組放在 lib/modules/[模組名]/
+2. 每個模組有 services / views / models 三層
+3. 模組間只透過 interface 溝通
+4. 付費功能必須先查詢 SubscriptionService.canDo()
+5. 不能修改其他模組的內部實作
+
+## 現有服務（lib/services/）
+- database_helper.dart（SQLite v4）
+- audio_manager.dart（音效）
+- vibration_manager.dart（震動）
+- timezone_utils.dart（11個時區）
+
+## Firebase版本（重要）
+firebase_core: ^3.6.0
+firebase_auth: ^5.3.0
+cloud_firestore: ^5.4.0
+Flutter版本：3.32.8
+
+## 付費等級額度
+Free：訊息10/天, 群組5人
+Lite：訊息50/天, 群組15人
+Plus：訊息100/天, 群組50人
+Pro：訊息200/天, 群組100+人
+
+## 編譯安裝指令
+cd C:\Users\w\StudioProjects\timed_messenger\android
+.\gradlew assembleDebug
+& "C:\Users\w\AppData\Local\Android\sdk\platform-tools\adb.exe" install -r "C:\Users\w\StudioProjects\timed_messenger\android\build\app\outputs\apk\debug\app-debug.apk"

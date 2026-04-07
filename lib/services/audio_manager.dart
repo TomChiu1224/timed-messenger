@@ -4,6 +4,7 @@
 
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
 /// ✅ 音效選項資料模型
 class SoundOption {
@@ -111,10 +112,46 @@ class AudioManager {
 
   /// 播放系統音效
   static Future<void> _playSystemSound(String soundName, int repeat) async {
-    for (int i = 0; i < repeat; i++) {
-      await SystemSound.play(SystemSoundType.alert);
-      if (i < repeat - 1) {
-        await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      // 根據音效名稱選擇對應的系統音效類型
+      AndroidSounds androidSound;
+      switch (soundName) {
+        case 'alarm':
+          androidSound = AndroidSounds.alarm;
+          break;
+        case 'ringtone':
+          androidSound = AndroidSounds.ringtone;
+          break;
+        case 'notification':
+        case 'message':
+        case 'beep':
+        default:
+          androidSound = AndroidSounds.notification;
+          break;
+      }
+
+      // 播放指定次數的系統音效
+      for (int i = 0; i < repeat; i++) {
+        await FlutterRingtonePlayer().play(
+          android: androidSound,
+          ios: IosSound.receivedMessage,
+          looping: false,
+          volume: 1.0,
+        );
+
+        // 等待音效播放完成後再播放下一次
+        if (i < repeat - 1) {
+          await Future.delayed(const Duration(milliseconds: 1500));
+        }
+      }
+    } catch (e) {
+      print('❌ 系統音效播放失敗，使用備援方案: $e');
+      // 備援：使用 SystemSound
+      for (int i = 0; i < repeat; i++) {
+        await SystemSound.play(SystemSoundType.alert);
+        if (i < repeat - 1) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     }
   }
@@ -141,11 +178,21 @@ class AudioManager {
 
   /// 停止當前播放的音效
   static Future<void> stopSound() async {
-    await _audioPlayer.stop();
+    try {
+      await _audioPlayer.stop();
+      await FlutterRingtonePlayer().stop();
+    } catch (e) {
+      print('❌ 停止音效失敗: $e');
+    }
   }
 
   /// 釋放音效播放器資源
   static Future<void> dispose() async {
-    await _audioPlayer.dispose();
+    try {
+      await _audioPlayer.dispose();
+      await FlutterRingtonePlayer().stop();
+    } catch (e) {
+      print('❌ 釋放音效資源失敗: $e');
+    }
   }
 }

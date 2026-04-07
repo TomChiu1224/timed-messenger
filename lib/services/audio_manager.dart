@@ -26,6 +26,13 @@ class AudioManager {
   // 可用的系統音效選項（使用 Flutter 內建音效）
   static const List<SoundOption> _systemSounds = [
     SoundOption(
+      id: 'notification',
+      name: '通知音',
+      type: 'system',
+      path: 'SystemSoundType.alert',
+      description: '預設的通知聲音',
+    ),
+    SoundOption(
       id: 'alert',
       name: '系統提示音',
       type: 'system',
@@ -69,7 +76,7 @@ class AudioManager {
       if (soundId == 'click') {
         soundType = SystemSoundType.click;
       } else {
-        // 預設使用 alert（適合通知、鬧鐘等場景）
+        // 預設使用 alert（適合 notification、alert 等場景）
         soundType = SystemSoundType.alert;
       }
 

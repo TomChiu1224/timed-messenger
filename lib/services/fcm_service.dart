@@ -38,6 +38,10 @@ class FCMService {
     try {
       print('🔄 初始化 FCM 服務...');
 
+      // 0. 初始化本地通知管理器
+      await notificationManager.initialize();
+      print('✅ 本地通知管理器初始化完成');
+
       // 1. 請求通知權限
       final settings = await _requestPermission();
       if (settings.authorizationStatus != AuthorizationStatus.authorized) {
@@ -190,7 +194,6 @@ class FCMService {
       final notification = message.notification;
       if (notification == null) return;
 
-      final notificationManager = NotificationManager();
       await notificationManager.scheduleNotification(
         id: message.hashCode,
         title: notification.title ?? '愛傳時提醒',

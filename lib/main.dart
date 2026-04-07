@@ -7,7 +7,9 @@
 // ✅ 震動模式功能完整支援
 import 'package:firebase_auth/firebase_auth.dart'; // ✅ 新增
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ FCM 推播通知
 import 'firebase_service.dart';
+import 'services/fcm_service.dart'; // ✅ FCM 服務
 import 'modules/auth/views/login_page.dart';
 import 'modules/auth/services/auth_service.dart';
 import 'package:timed_messenger/modules/messaging/services/messaging_service.dart'; // ← 改成完整路徑
@@ -52,6 +54,9 @@ import 'services/theme_manager.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ✅ 註冊 Firebase 背景訊息處理器（必須在 runApp 之前）
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
   // ✅ 初始化時區資料
   try {
     tz.initializeTimeZones();
@@ -93,10 +98,19 @@ void main() async {
   //   }
   // }
 
-  // ✅ 新增這3行
+  // ✅ Firebase 相關初始化
   await Firebase.initializeApp();
   final firebaseService = FirebaseService();
   await firebaseService.initialize();
+
+  // ✅ 初始化 FCM 推播通知服務
+  try {
+    await fcmService.initialize();
+    debugPrint('✅ FCM 推播通知初始化完成');
+  } catch (e) {
+    debugPrint('⚠️ FCM 推播通知初始化失敗: $e');
+  }
+
   // ✅ 初始化主題管理器
   final themeManager = ThemeManager();
   await themeManager.loadThemeSettings();

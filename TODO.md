@@ -9,7 +9,7 @@
 ## ✅ 任務3：重構main.dart續 - 已完成
 把 lib/main.dart 裡的 SimpleTimeZone 和 AppTimeZones 搬到獨立檔案 lib/models/timezone_data.dart，完成後執行 git commit
 
-## 任務4：推播通知
+## ✅ 任務4：推播通知 - 已完成
 實作 Firebase Cloud Messaging，讓 App 關閉時也能收到排程提醒，完成後執行 git commit
 
 ## 任務5：付費訂閱功能

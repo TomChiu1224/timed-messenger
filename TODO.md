@@ -12,5 +12,5 @@
 ## ✅ 任務4：推播通知 - 已完成
 實作 Firebase Cloud Messaging，讓 App 關閉時也能收到排程提醒，完成後執行 git commit
 
-## 任務5：付費訂閱功能
+## ✅ 任務5：付費訂閱功能 - 已完成
 實作 Free/Lite/Plus/Pro 四個等級，完成後執行 git commit

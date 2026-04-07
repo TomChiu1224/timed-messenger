@@ -50,6 +50,9 @@ dependencies:
   # 使用Flutter內建的ThemeData和MaterialColor
   # shared_preferences 已在上方列出，用於儲存主題偏好
 
+  # ========== 付費訂閱功能 ==========
+  in_app_purchase: ^3.2.0           # 應用內購買功能
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

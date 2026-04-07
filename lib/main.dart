@@ -46,6 +46,8 @@ import 'task_category_page.dart';
 import 'statistics_page.dart';
 import 'import_export_page.dart';
 import 'services/theme_manager.dart';
+import 'subscription_page.dart'; // ✅ 訂閱頁面
+import 'services/subscription_service.dart'; // ✅ 訂閱服務
 
 // 初始化通知插件
 // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -97,6 +99,14 @@ void main() async {
   //     debugPrint('⚠️ 通知初始化失敗: $e');
   //   }
   // }
+
+  // ✅ 初始化訂閱服務
+  try {
+    await SubscriptionService().initialize();
+    debugPrint('✅ 訂閱服務初始化完成');
+  } catch (e) {
+    debugPrint('⚠️ 訂閱服務初始化失敗: $e');
+  }
 
   // ✅ Firebase 相關初始化
   await Firebase.initializeApp();
@@ -2326,6 +2336,14 @@ class _HomePageState extends State<HomePage> {
                   _showThemeSettings();
                   break;
 
+                case 'subscription':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SubscriptionPage()),
+                  );
+                  break;
+
                 case 'info':
                   _showAppInfo();
                   break;
@@ -2364,6 +2382,14 @@ class _HomePageState extends State<HomePage> {
                 child: ListTile(
                   leading: Icon(Icons.palette),
                   title: Text('主題設定'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'subscription',
+                child: ListTile(
+                  leading: Icon(Icons.workspace_premium, color: Colors.amber),
+                  title: Text('訂閱方案'),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),

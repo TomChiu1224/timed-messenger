@@ -3,7 +3,6 @@
 // 從原本的 main.dart 抽取出來，保持功能完全相同
 
 import 'package:flutter/services.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 
 /// ✅ 音效選項資料模型
@@ -25,7 +24,6 @@ class SoundOption {
 
 /// ✅ 音效管理器類別 - 負責所有音效相關功能
 class AudioManager {
-  static final AudioPlayer _audioPlayer = AudioPlayer();
 
   // 可用的系統音效選項
   static const List<SoundOption> _systemSounds = [
@@ -95,13 +93,8 @@ class AudioManager {
         return;
       }
 
-      await _audioPlayer.setVolume(volume);
-
-      if (soundOption.type == 'system') {
-        await _playSystemSound(soundOption.path, repeat);
-      } else {
-        await _playCustomSound(soundOption.path, repeat);
-      }
+      // 直接播放系統音效，不使用 audioplayers
+      await _playSystemSound(soundOption.path, repeat);
 
       print('✅ 音效播放成功: ${soundOption.name}');
     } catch (e) {
@@ -110,7 +103,7 @@ class AudioManager {
     }
   }
 
-  /// 播放系統音效
+  /// 播放系統音效 - 使用 flutter_ringtone_player 確保可靠播放
   static Future<void> _playSystemSound(String soundName, int repeat) async {
     try {
       // 根據音效名稱選擇對應的系統音效類型
@@ -156,16 +149,6 @@ class AudioManager {
     }
   }
 
-  /// 播放自訂音效檔案
-  static Future<void> _playCustomSound(String soundPath, int repeat) async {
-    for (int i = 0; i < repeat; i++) {
-      await _audioPlayer.play(AssetSource(soundPath));
-      if (i < repeat - 1) {
-        await Future.delayed(const Duration(seconds: 1));
-      }
-    }
-  }
-
   /// 備援：播放系統嗶聲
   static Future<void> _playSystemBeep() async {
     await SystemSound.play(SystemSoundType.alert);
@@ -179,7 +162,6 @@ class AudioManager {
   /// 停止當前播放的音效
   static Future<void> stopSound() async {
     try {
-      await _audioPlayer.stop();
       await FlutterRingtonePlayer().stop();
     } catch (e) {
       print('❌ 停止音效失敗: $e');
@@ -189,7 +171,6 @@ class AudioManager {
   /// 釋放音效播放器資源
   static Future<void> dispose() async {
     try {
-      await _audioPlayer.dispose();
       await FlutterRingtonePlayer().stop();
     } catch (e) {
       print('❌ 釋放音效資源失敗: $e');

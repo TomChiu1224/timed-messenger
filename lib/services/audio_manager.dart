@@ -3,7 +3,7 @@
 // 從原本的 main.dart 抽取出來，保持功能完全相同
 
 import 'package:flutter/services.dart';
-import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 /// ✅ 音效選項資料模型
 class SoundOption {
@@ -24,6 +24,8 @@ class SoundOption {
 
 /// ✅ 音效管理器類別 - 負責所有音效相關功能
 class AudioManager {
+  // 音效播放器實例
+  static final AudioPlayer _audioPlayer = AudioPlayer();
 
   // 可用的系統音效選項
   static const List<SoundOption> _systemSounds = [
@@ -87,50 +89,28 @@ class AudioManager {
     int repeat = 1,
   }) async {
     try {
-      final soundOption = getSoundById(soundId);
-      if (soundOption == null) {
-        print('❌ 找不到音效: $soundId');
-        return;
-      }
-
-      // 直接播放系統音效，不使用 audioplayers
-      await _playSystemSound(soundOption.path, repeat);
-
-      print('✅ 音效播放成功: ${soundOption.name}');
+      // 播放本地音效檔案
+      await _playLocalSound(volume: volume, repeat: repeat);
+      print('✅ 音效播放成功: $soundId');
     } catch (e) {
       print('❌ 音效播放失敗: $e');
       await _playSystemBeep();
     }
   }
 
-  /// 播放系統音效 - 使用 flutter_ringtone_player 確保可靠播放
-  static Future<void> _playSystemSound(String soundName, int repeat) async {
+  /// 播放本地音效檔案 - 使用 audioplayers 確保可靠播放
+  static Future<void> _playLocalSound({
+    double volume = 0.8,
+    int repeat = 1,
+  }) async {
     try {
-      // 根據音效名稱選擇對應的系統音效類型
-      AndroidSounds androidSound;
-      switch (soundName) {
-        case 'alarm':
-          androidSound = AndroidSounds.alarm;
-          break;
-        case 'ringtone':
-          androidSound = AndroidSounds.ringtone;
-          break;
-        case 'notification':
-        case 'message':
-        case 'beep':
-        default:
-          androidSound = AndroidSounds.notification;
-          break;
-      }
+      // 設定音量
+      await _audioPlayer.setVolume(volume);
 
-      // 播放指定次數的系統音效
+      // 播放指定次數
       for (int i = 0; i < repeat; i++) {
-        await FlutterRingtonePlayer().play(
-          android: androidSound,
-          ios: IosSound.receivedMessage,
-          looping: false,
-          volume: 1.0,
-        );
+        // 播放本地 asset 音效
+        await _audioPlayer.play(AssetSource('sounds/notification.mp3'));
 
         // 等待音效播放完成後再播放下一次
         if (i < repeat - 1) {
@@ -138,7 +118,7 @@ class AudioManager {
         }
       }
     } catch (e) {
-      print('❌ 系統音效播放失敗，使用備援方案: $e');
+      print('❌ 本地音效播放失敗，使用備援方案: $e');
       // 備援：使用 SystemSound
       for (int i = 0; i < repeat; i++) {
         await SystemSound.play(SystemSoundType.alert);
@@ -162,7 +142,7 @@ class AudioManager {
   /// 停止當前播放的音效
   static Future<void> stopSound() async {
     try {
-      await FlutterRingtonePlayer().stop();
+      await _audioPlayer.stop();
     } catch (e) {
       print('❌ 停止音效失敗: $e');
     }
@@ -171,7 +151,8 @@ class AudioManager {
   /// 釋放音效播放器資源
   static Future<void> dispose() async {
     try {
-      await FlutterRingtonePlayer().stop();
+      await _audioPlayer.stop();
+      await _audioPlayer.dispose();
     } catch (e) {
       print('❌ 釋放音效資源失敗: $e');
     }

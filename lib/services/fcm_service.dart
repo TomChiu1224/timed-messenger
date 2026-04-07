@@ -147,22 +147,26 @@ class FCMService {
     print('   內容: ${message.notification?.body}');
     print('   資料: ${message.data}');
 
-    // 播放音效
-    final audioManager = AudioManager();
-    await audioManager.initialize();
-    final soundEnabled = await audioManager.isSoundEnabled();
-    if (soundEnabled) {
-      final soundFile = await audioManager.getCurrentSoundFile();
-      await audioManager.playSound(soundFile);
+    // 播放音效（使用預設通知音）
+    try {
+      await AudioManager.playSound(
+        soundId: 'notification',
+        volume: 0.8,
+        repeat: 1,
+      );
+    } catch (e) {
+      print('⚠️ 播放音效失敗: $e');
     }
 
-    // 震動
-    final vibrationManager = VibrationManager();
-    await vibrationManager.initialize();
-    final vibrationEnabled = await vibrationManager.isVibrationEnabled();
-    if (vibrationEnabled) {
-      final pattern = await vibrationManager.getCurrentPattern();
-      await vibrationManager.vibrate(pattern);
+    // 震動（使用短震動）
+    try {
+      await VibrationManager.playVibration(
+        patternId: 'short',
+        intensity: 0.8,
+        repeat: 1,
+      );
+    } catch (e) {
+      print('⚠️ 震動失敗: $e');
     }
 
     // 顯示本地通知（確保用戶能看到）

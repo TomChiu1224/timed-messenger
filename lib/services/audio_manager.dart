@@ -3,6 +3,7 @@
 // 從原本的 main.dart 抽取出來，保持功能完全相同
 
 import 'package:flutter/services.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 /// ✅ 音效選項資料模型
 class SoundOption {
@@ -23,42 +24,45 @@ class SoundOption {
 
 /// ✅ 音效管理器類別 - 負責所有音效相關功能
 class AudioManager {
+  // 音效播放器實例（靜態共用）
+  static final AudioPlayer _player = AudioPlayer();
+  static bool _isPlaying = false;
 
-  // 可用的系統音效選項
+  // 可用的系統音效選項（對應 assets/sounds/ 中的檔案）
   static const List<SoundOption> _systemSounds = [
     SoundOption(
       id: 'notification',
       name: '預設通知音',
       type: 'system',
-      path: 'notification',
+      path: 'assets/sounds/notification.mp3',
       description: '系統預設的通知聲音',
     ),
     SoundOption(
       id: 'alarm',
       name: '鬧鐘聲',
       type: 'system',
-      path: 'alarm',
+      path: 'assets/sounds/alarm.mp3',
       description: '響亮的鬧鐘聲音',
     ),
     SoundOption(
       id: 'ringtone',
       name: '來電鈴聲',
       type: 'system',
-      path: 'ringtone',
+      path: 'assets/sounds/ringtone.mp3',
       description: '手機來電鈴聲',
     ),
     SoundOption(
       id: 'message',
       name: '訊息提示音',
       type: 'system',
-      path: 'message',
+      path: 'assets/sounds/message.mp3',
       description: '簡短的訊息提示音',
     ),
     SoundOption(
       id: 'beep',
       name: '嗶嗶聲',
       type: 'system',
-      path: 'beep',
+      path: 'assets/sounds/beep.mp3',
       description: '簡單的嗶嗶提示音',
     ),
   ];
@@ -79,24 +83,51 @@ class AudioManager {
     }
   }
 
-  /// 播放指定的音效 - 使用 Flutter 內建的 SystemSound
+  /// 播放指定的音效 - 使用 audioplayers 播放真實音效
   static Future<void> playSound({
     required String soundId,
     double volume = 0.8,
     int repeat = 1,
   }) async {
     try {
-      // 使用系統音效，播放指定次數
-      for (int i = 0; i < repeat; i++) {
+      // 根據 soundId 找到對應的音效檔案
+      final soundOption = getSoundById(soundId);
+      if (soundOption == null) {
+        print('❌ 找不到音效: $soundId，使用預設音效');
         await SystemSound.play(SystemSoundType.alert);
+        return;
+      }
+
+      // 設定音量（0.0 到 1.0）
+      await _player.setVolume(volume);
+
+      // 播放指定次數
+      for (int i = 0; i < repeat; i++) {
+        _isPlaying = true;
+
+        // 播放音效檔案
+        await _player.play(AssetSource(soundOption.path.replaceFirst('assets/', '')));
+
+        // 等待播放完成
+        await _player.onPlayerComplete.first;
+
         if (i < repeat - 1) {
           // 兩次播放之間稍微等待
-          await Future.delayed(const Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 300));
         }
       }
-      print('✅ 音效播放成功: $soundId');
+
+      _isPlaying = false;
+      print('✅ 音效播放成功: ${soundOption.name} (${soundOption.path})');
     } catch (e) {
+      _isPlaying = false;
       print('❌ 音效播放失敗: $e');
+      // 備援：使用系統預設提示音
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (fallbackError) {
+        print('❌ 備援音效也失敗: $fallbackError');
+      }
     }
   }
 
@@ -105,15 +136,27 @@ class AudioManager {
     await playSound(soundId: soundId, volume: 0.6, repeat: 1);
   }
 
-  /// 停止當前播放的音效（SystemSound 無法停止，保留此方法以維持介面一致）
+  /// 停止當前播放的音效
   static Future<void> stopSound() async {
-    // SystemSound 無法停止，此方法保留以維持介面一致
-    print('ℹ️ SystemSound 無法停止');
+    try {
+      if (_isPlaying) {
+        await _player.stop();
+        _isPlaying = false;
+        print('✅ 音效已停止');
+      }
+    } catch (e) {
+      print('❌ 停止音效失敗: $e');
+    }
   }
 
-  /// 釋放音效播放器資源（SystemSound 無需釋放，保留此方法以維持介面一致）
+  /// 釋放音效播放器資源
   static Future<void> dispose() async {
-    // SystemSound 無需釋放資源，此方法保留以維持介面一致
-    print('ℹ️ SystemSound 無需釋放資源');
+    try {
+      await _player.dispose();
+      _isPlaying = false;
+      print('✅ 音效播放器資源已釋放');
+    } catch (e) {
+      print('❌ 釋放資源失敗: $e');
+    }
   }
 }

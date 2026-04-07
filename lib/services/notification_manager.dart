@@ -54,7 +54,7 @@ class NotificationManager {
         },
       );
 
-      // 創建 Android 通知頻道（帶聲音）
+      // 創建 Android 通知頻道（使用系統預設聲音）
       if (Platform.isAndroid) {
         const androidChannel = AndroidNotificationChannel(
           'timed_messenger_channel',
@@ -63,7 +63,7 @@ class NotificationManager {
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
-          sound: RawResourceAndroidNotificationSound('notification'),
+          // 使用系統預設通知音效，無需自訂音效檔案
         );
 
         await _flutterLocalNotificationsPlugin
@@ -71,7 +71,7 @@ class NotificationManager {
                 AndroidFlutterLocalNotificationsPlugin>()
             ?.createNotificationChannel(androidChannel);
 
-        print('✅ Android 通知頻道已創建（含聲音與震動）');
+        print('✅ Android 通知頻道已創建（使用系統預設音效與震動）');
       }
 
       // 請求 iOS 通知權限
@@ -149,7 +149,7 @@ class NotificationManager {
         print('⚠️ 設備不支援震動功能');
       }
 
-      // 2. 發出本地通知（帶聲音）
+      // 2. 發出本地通知（使用系統預設聲音）
       const androidDetails = AndroidNotificationDetails(
         'timed_messenger_channel',
         '愛傳時通知',
@@ -158,7 +158,7 @@ class NotificationManager {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
-        sound: RawResourceAndroidNotificationSound('notification'),
+        // 使用系統預設通知音效
       );
 
       const iosDetails = DarwinNotificationDetails(

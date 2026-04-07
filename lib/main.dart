@@ -56,9 +56,6 @@ import 'services/subscription_service.dart'; // ✅ 訂閱服務
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 註冊 Firebase 背景訊息處理器（必須在 runApp 之前）
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
   // ✅ 初始化時區資料
   try {
     tz.initializeTimeZones();
@@ -108,17 +105,26 @@ void main() async {
     debugPrint('⚠️ 訂閱服務初始化失敗: $e');
   }
 
-  // ✅ Firebase 相關初始化
-  await Firebase.initializeApp();
-  final firebaseService = FirebaseService();
-  await firebaseService.initialize();
+  // ✅ Firebase 相關初始化（僅限 Android/iOS）
+  FirebaseService? firebaseService;
+  if (Platform.isAndroid || Platform.isIOS) {
+    try {
+      // 註冊 Firebase 背景訊息處理器（必須在 runApp 之前）
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
-  // ✅ 初始化 FCM 推播通知服務
-  try {
-    await fcmService.initialize();
-    debugPrint('✅ FCM 推播通知初始化完成');
-  } catch (e) {
-    debugPrint('⚠️ FCM 推播通知初始化失敗: $e');
+      await Firebase.initializeApp();
+      firebaseService = FirebaseService();
+      await firebaseService.initialize();
+      debugPrint('✅ Firebase 初始化完成');
+
+      // ✅ 初始化 FCM 推播通知服務
+      await fcmService.initialize();
+      debugPrint('✅ FCM 推播通知初始化完成');
+    } catch (e) {
+      debugPrint('⚠️ Firebase 初始化失敗: $e');
+    }
+  } else {
+    debugPrint('ℹ️ 桌面平台不支援 Firebase，已跳過初始化');
   }
 
   // ✅ 初始化主題管理器
@@ -130,10 +136,10 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   final ThemeManager themeManager;
-  final FirebaseService firebaseService;
+  final FirebaseService? firebaseService;
 
   const MyApp(
-      {super.key, required this.themeManager, required this.firebaseService});
+      {super.key, required this.themeManager, this.firebaseService});
 
   @override
   Widget build(BuildContext context) {
@@ -153,16 +159,19 @@ class MyApp extends StatelessWidget {
             ),
             child: child!,
           ),
-          home: StreamBuilder(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              // ✅ 修正：明確判斷 data 不為 null 才跳轉
-              if (snapshot.hasData && snapshot.data != null) {
-                return HomePage(themeManager: themeManager);
-              }
-              return const LoginPage();
-            },
-          ),
+          home: firebaseService != null
+              ? StreamBuilder(
+                  stream: FirebaseAuth.instance.authStateChanges(),
+                  builder: (context, snapshot) {
+                    // ✅ 修正：明確判斷 data 不為 null 才跳轉
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return HomePage(themeManager: themeManager);
+                    }
+                    return const LoginPage();
+                  },
+                )
+              : HomePage(
+                  themeManager: themeManager), // 桌面平台直接顯示主頁（無需登入）
         );
       },
     );

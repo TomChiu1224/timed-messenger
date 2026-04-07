@@ -3,7 +3,7 @@
 ## ✅ 任務1：重構main.dart（最優先）- 已完成
 把 lib/main.dart 裡的 SoundSettings class 搬到獨立檔案 lib/models/sound_settings.dart，完成後執行 git commit
 
-## 任務2：重構main.dart續
+## ✅ 任務2：重構main.dart續 - 已完成
 把 lib/main.dart 裡的 VibrationSettings class 搬到獨立檔案 lib/models/vibration_settings.dart，完成後執行 git commit
 
 ## 任務3：重構main.dart續

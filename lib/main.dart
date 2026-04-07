@@ -22,6 +22,7 @@ import 'services/vibration_manager.dart'; // 新加入的震動引用
 import 'models/scheduled_message.dart';
 import 'models/task_category.dart';
 import 'models/sound_settings.dart';
+import 'models/vibration_settings.dart';
 
 // 通知與時區（僅移動平台）
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -95,39 +96,6 @@ class AppTimeZones {
     } catch (e) {
       return null;
     }
-  }
-}
-
-// ✅ 震動設定資料模型
-class VibrationSettings {
-  bool enabled;
-  String patternId;
-  double intensity;
-  int repeat;
-
-  VibrationSettings({
-    this.enabled = true,
-    this.patternId = 'short',
-    this.intensity = 0.8,
-    this.repeat = 1,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'vibration_enabled': enabled ? 1 : 0,
-      'vibration_pattern': patternId,
-      'vibration_intensity': intensity,
-      'vibration_repeat': repeat,
-    };
-  }
-
-  static VibrationSettings fromScheduledMessage(ScheduledMessage msg) {
-    return VibrationSettings(
-      enabled: msg.vibrationEnabled,
-      patternId: msg.vibrationPattern,
-      intensity: msg.vibrationIntensity,
-      repeat: msg.vibrationRepeat,
-    );
   }
 }
 

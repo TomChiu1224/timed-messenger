@@ -6,7 +6,7 @@
 ## ✅ 任務2：重構main.dart續 - 已完成
 把 lib/main.dart 裡的 VibrationSettings class 搬到獨立檔案 lib/models/vibration_settings.dart，完成後執行 git commit
 
-## 任務3：重構main.dart續
+## ✅ 任務3：重構main.dart續 - 已完成
 把 lib/main.dart 裡的 SimpleTimeZone 和 AppTimeZones 搬到獨立檔案 lib/models/timezone_data.dart，完成後執行 git commit
 
 ## 任務4：推播通知

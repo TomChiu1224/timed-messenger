@@ -29,8 +29,7 @@ dependencies:
   shared_preferences: ^2.2.2
 
   # ========== 音效功能 ==========
-  audioplayers: ^5.2.1          # 音效播放庫
-  path_provider: ^2.1.1         # 檔案路徑管理
+  # 已改用 Flutter 內建的 SystemSound，無需額外依賴
 
   # ========== 震動功能 ==========
   vibration: ^3.1.3             # 震動控制庫（升級解決 Android 編譯錯誤）
@@ -65,8 +64,7 @@ flutter:
   assets:
     # 時區資料檔案
     - packages/timezone/data/latest_all.tzf
-    # 音效檔案
-    - assets/sounds/notification.mp3
+    # 音效已改用 Flutter 內建的 SystemSound，無需音效檔案
     # 主題相關資源（如需要自訂圖示或圖片時使用）
     # - assets/images/
     # - assets/icons/  

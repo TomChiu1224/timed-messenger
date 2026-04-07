@@ -3,7 +3,6 @@
 // 從原本的 main.dart 抽取出來，保持功能完全相同
 
 import 'package:flutter/services.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 /// ✅ 音效選項資料模型
 class SoundOption {
@@ -24,8 +23,6 @@ class SoundOption {
 
 /// ✅ 音效管理器類別 - 負責所有音效相關功能
 class AudioManager {
-  // 音效播放器實例
-  static final AudioPlayer _audioPlayer = AudioPlayer();
 
   // 可用的系統音效選項
   static const List<SoundOption> _systemSounds = [
@@ -82,56 +79,25 @@ class AudioManager {
     }
   }
 
-  /// 播放指定的音效
+  /// 播放指定的音效 - 使用 Flutter 內建的 SystemSound
   static Future<void> playSound({
     required String soundId,
     double volume = 0.8,
     int repeat = 1,
   }) async {
     try {
-      // 播放本地音效檔案
-      await _playLocalSound(volume: volume, repeat: repeat);
-      print('✅ 音效播放成功: $soundId');
-    } catch (e) {
-      print('❌ 音效播放失敗: $e');
-      await _playSystemBeep();
-    }
-  }
-
-  /// 播放本地音效檔案 - 使用 audioplayers 確保可靠播放
-  static Future<void> _playLocalSound({
-    double volume = 0.8,
-    int repeat = 1,
-  }) async {
-    try {
-      // 設定音量
-      await _audioPlayer.setVolume(volume);
-
-      // 播放指定次數
-      for (int i = 0; i < repeat; i++) {
-        // 播放本地 asset 音效
-        await _audioPlayer.play(AssetSource('sounds/notification.mp3'));
-
-        // 等待音效播放完成後再播放下一次
-        if (i < repeat - 1) {
-          await Future.delayed(const Duration(milliseconds: 1500));
-        }
-      }
-    } catch (e) {
-      print('❌ 本地音效播放失敗，使用備援方案: $e');
-      // 備援：使用 SystemSound
+      // 使用系統音效，播放指定次數
       for (int i = 0; i < repeat; i++) {
         await SystemSound.play(SystemSoundType.alert);
         if (i < repeat - 1) {
+          // 兩次播放之間稍微等待
           await Future.delayed(const Duration(milliseconds: 500));
         }
       }
+      print('✅ 音效播放成功: $soundId');
+    } catch (e) {
+      print('❌ 音效播放失敗: $e');
     }
-  }
-
-  /// 備援：播放系統嗶聲
-  static Future<void> _playSystemBeep() async {
-    await SystemSound.play(SystemSoundType.alert);
   }
 
   /// 預覽音效（用於設定時試聽）
@@ -139,22 +105,15 @@ class AudioManager {
     await playSound(soundId: soundId, volume: 0.6, repeat: 1);
   }
 
-  /// 停止當前播放的音效
+  /// 停止當前播放的音效（SystemSound 無法停止，保留此方法以維持介面一致）
   static Future<void> stopSound() async {
-    try {
-      await _audioPlayer.stop();
-    } catch (e) {
-      print('❌ 停止音效失敗: $e');
-    }
+    // SystemSound 無法停止，此方法保留以維持介面一致
+    print('ℹ️ SystemSound 無法停止');
   }
 
-  /// 釋放音效播放器資源
+  /// 釋放音效播放器資源（SystemSound 無需釋放，保留此方法以維持介面一致）
   static Future<void> dispose() async {
-    try {
-      await _audioPlayer.stop();
-      await _audioPlayer.dispose();
-    } catch (e) {
-      print('❌ 釋放音效資源失敗: $e');
-    }
+    // SystemSound 無需釋放資源，此方法保留以維持介面一致
+    print('ℹ️ SystemSound 無需釋放資源');
   }
 }

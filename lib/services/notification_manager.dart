@@ -237,6 +237,17 @@ class NotificationManager {
     };
   }
 
+  /// 🔔 立即觸發通知（公開方法）
+  Future<void> showNotification({
+    required String title,
+    required String body,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+    await _triggerNotification(title, body);
+  }
+
   /// 🧪 測試通知功能
   Future<bool> testNotification() async {
     try {

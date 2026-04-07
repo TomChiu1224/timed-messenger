@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'services/audio_manager.dart'; // 之前加入的音效引用
 import 'services/vibration_manager.dart'; // 新加入的震動引用
+import 'services/notification_manager.dart'; // 本地通知管理器
 import 'models/scheduled_message.dart';
 import 'models/task_category.dart';
 import 'models/sound_settings.dart';
@@ -130,6 +131,16 @@ void main() async {
   // ✅ 初始化主題管理器
   final themeManager = ThemeManager();
   await themeManager.loadThemeSettings();
+
+  // ✅ 初始化通知管理器（僅限移動平台）
+  if (Platform.isAndroid || Platform.isIOS) {
+    try {
+      await notificationManager.initialize();
+      debugPrint('✅ 通知管理器初始化完成');
+    } catch (e) {
+      debugPrint('⚠️ 通知管理器初始化失敗: $e');
+    }
+  }
 
   runApp(MyApp(themeManager: themeManager, firebaseService: firebaseService));
 }
@@ -341,6 +352,14 @@ class _HomePageState extends State<HomePage> {
             // ✅ 播放震動（如果啟用）
             if (msg.vibrationEnabled) {
               _playScheduledVibration(msg);
+            }
+
+            // ✅ 移動平台發送本地通知
+            if (isMobile) {
+              notificationManager.showNotification(
+                title: '排程提醒',
+                body: msg.message,
+              );
             }
 
             // ✅ 桌面版顯示對話框通知

@@ -21,6 +21,7 @@ import 'services/audio_manager.dart'; // 之前加入的音效引用
 import 'services/vibration_manager.dart'; // 新加入的震動引用
 import 'models/scheduled_message.dart';
 import 'models/task_category.dart';
+import 'models/sound_settings.dart';
 
 // 通知與時區（僅移動平台）
 // import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -94,40 +95,6 @@ class AppTimeZones {
     } catch (e) {
       return null;
     }
-  }
-}
-
-// ✅ 音效設定資料模型
-class SoundSettings {
-  bool enabled;
-  String soundId;
-  double volume;
-  int repeat;
-
-  SoundSettings({
-    this.enabled = true,
-    this.soundId = 'notification',
-    this.volume = 0.8,
-    this.repeat = 1,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'sound_enabled': enabled ? 1 : 0,
-      'sound_type': 'system',
-      'sound_path': soundId,
-      'sound_volume': volume,
-      'sound_repeat': repeat,
-    };
-  }
-
-  static SoundSettings fromScheduledMessage(ScheduledMessage msg) {
-    return SoundSettings(
-      enabled: msg.soundEnabled,
-      soundId: msg.soundPath,
-      volume: msg.soundVolume,
-      repeat: msg.soundRepeat,
-    );
   }
 }
 

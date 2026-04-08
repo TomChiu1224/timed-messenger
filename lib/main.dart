@@ -73,30 +73,15 @@ void main() async {
     debugPrint('✅ 桌面平台 SQLite 初始化完成');
   }
 
-  // ✅ 移動平台通知初始化（已註釋，移除通知功能）
-  // if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-  //   try {
-  //     final InitializationSettings initSettings = InitializationSettings(
-  //       android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
-  //       iOS: const DarwinInitializationSettings(),
-  //     );
-  //     await flutterLocalNotificationsPlugin.initialize(initSettings);
-  //
-  //     if (Platform.isAndroid) {
-  //       const AndroidNotificationChannel channel = AndroidNotificationChannel(
-  //         'scheduled_channel',
-  //         '排程通知頻道',
-  //         description: '用於排程任務的本地通知',
-  //         importance: Importance.max,
-  //       );
-  //       final androidPlugin = flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-  //       await androidPlugin?.createNotificationChannel(channel);
-  //     }
-  //     debugPrint('✅ 移動平台通知初始化完成');
-  //   } catch (e) {
-  //     debugPrint('⚠️ 通知初始化失敗: $e');
-  //   }
-  // }
+  // ✅ 移動平台通知初始化（使用 NotificationManager）
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    try {
+      await notificationManager.initialize();
+      debugPrint('✅ 移動平台通知初始化完成');
+    } catch (e) {
+      debugPrint('⚠️ 通知初始化失敗: $e');
+    }
+  }
 
   // ✅ 初始化訂閱服務
   try {
@@ -592,20 +577,29 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // ✅ 播放排程設定的音效
+  // ✅ 播放排程設定的音效（移動平台使用通知音效）
   Future<void> _playScheduledSound(ScheduledMessage msg) async {
     try {
-      await AudioManager.playSound(
-        soundId: msg.soundPath,
-        volume: msg.soundVolume,
-        repeat: msg.soundRepeat,
-      );
+      final bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-      debugPrint('✅ 排程音效播放: ${msg.soundPath}');
+      if (isMobile) {
+        // ✅ 移動平台：使用通知系統播放音效（確保 Android 有聲音）
+        await notificationManager.showNotification(
+          title: '🔔 排程提醒',
+          body: msg.message,
+        );
+        debugPrint('✅ 透過通知播放音效: ${msg.message}');
+      } else {
+        // ✅ 桌面平台：使用 AudioManager
+        await AudioManager.playSound(
+          soundId: msg.soundPath,
+          volume: msg.soundVolume,
+          repeat: msg.soundRepeat,
+        );
+        debugPrint('✅ 排程音效播放: ${msg.soundPath}');
+      }
     } catch (e) {
       debugPrint('❌ 排程音效播放失敗: $e');
-      // 如果播放失敗，使用系統預設提示音作為備援
-      await SystemSound.play(SystemSoundType.alert);
     }
   }
 
@@ -1518,7 +1512,19 @@ class _HomePageState extends State<HomePage> {
                                   alignment: Alignment.centerRight,
                                   child: TextButton.icon(
                                     onPressed: () {
-                                      AudioManager.previewSound(editSoundId);
+                                      final bool isMobile = !kIsWeb &&
+                                          (Platform.isAndroid ||
+                                              Platform.isIOS);
+                                      if (isMobile) {
+                                        // ✅ 移動平台：發送測試通知（確保 Android 有聲音）
+                                        notificationManager.showNotification(
+                                          title: '🔊 試聽音效',
+                                          body: '這是音效測試通知',
+                                        );
+                                      } else {
+                                        // ✅ 桌面平台：使用 AudioManager
+                                        AudioManager.previewSound(editSoundId);
+                                      }
                                     },
                                     icon: const Icon(Icons.play_circle_outline,
                                         size: 16),
@@ -2705,12 +2711,26 @@ class _HomePageState extends State<HomePage> {
                                         alignment: Alignment.centerRight,
                                         child: TextButton.icon(
                                           onPressed: () {
-                                            AudioManager.previewSound(
-                                                _selectedSoundId);
+                                            final bool isMobile = !kIsWeb &&
+                                                (Platform.isAndroid ||
+                                                    Platform.isIOS);
+                                            if (isMobile) {
+                                              // ✅ 移動平台：發送測試通知（確保 Android 有聲音）
+                                              notificationManager.showNotification(
+                                                title: '🔊 試聽音效',
+                                                body: '這是音效測試通知',
+                                              );
+                                            } else {
+                                              // ✅ 桌面平台：使用 AudioManager
+                                              AudioManager.previewSound(
+                                                  _selectedSoundId);
+                                            }
                                             ScaffoldMessenger.of(context)
                                                 .showSnackBar(
-                                              const SnackBar(
-                                                content: Text('🔊 正在播放預覽音效'),
+                                              SnackBar(
+                                                content: Text(isMobile
+                                                    ? '🔊 正在播放測試通知'
+                                                    : '🔊 正在播放預覽音效'),
                                                 duration: Duration(seconds: 1),
                                               ),
                                             );

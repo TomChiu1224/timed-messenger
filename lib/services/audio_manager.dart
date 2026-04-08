@@ -3,6 +3,7 @@
 // 使用 Flutter 內建 SystemSound，無需外部依賴
 
 import 'package:flutter/services.dart';
+import 'notification_manager.dart';
 
 /// ✅ 音效選項資料模型
 class SoundOption {
@@ -97,8 +98,17 @@ class AudioManager {
   }
 
   /// 預覽音效（用於設定時試聽）
+  /// 使用 NotificationManager 發送通知來預覽音效，讓每種音效使用不同的頻道
   static Future<void> previewSound(String soundId) async {
-    await playSound(soundId: soundId, repeat: 1);
+    try {
+      // 使用 NotificationManager 來預覽音效，這樣可以使用不同的通知頻道
+      await notificationManager.previewSound(soundId);
+      print('✅ 音效預覽成功: $soundId');
+    } catch (e) {
+      print('❌ 音效預覽失敗，使用備援方案: $e');
+      // 備援：使用 SystemSound
+      await playSound(soundId: soundId, repeat: 1);
+    }
   }
 
   /// 停止當前播放的音效（SystemSound 不支援停止，保留空方法以維持 API 兼容性）

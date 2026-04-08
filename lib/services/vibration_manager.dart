@@ -1,5 +1,6 @@
 // ✅ 震動功能管理器（從 main.dart 抽取的獨立模組）
 import 'package:vibration/vibration.dart';
+import 'notification_manager.dart';
 
 // ✅ 震動選項資料模型
 class VibrationOption {
@@ -158,12 +159,32 @@ class VibrationManager {
   }
 
   /// 預覽震動（用於設定時試用）
+  /// 使用 NotificationManager 發送通知並震動，提供更好的預覽體驗
   static Future<void> previewVibration(String patternId) async {
-    await playVibration(
-      patternId: patternId,
-      intensity: 0.6,  // 預覽時強度稍弱
-      repeat: 1,       // 預覽只震動一次
-    );
+    try {
+      final vibrationOption = getVibrationPatternById(patternId);
+      if (vibrationOption == null) {
+        print('❌ 找不到震動模式: $patternId');
+        return;
+      }
+
+      // 使用 NotificationManager 來預覽震動，這樣可以發送通知並震動
+      // 將震動模式轉換為可用的格式（添加前置延遲 0）
+      final pattern = [0, ...vibrationOption.pattern];
+      await notificationManager.previewVibration(
+        pattern,
+        patternName: vibrationOption.name,
+      );
+      print('✅ 震動預覽成功: ${vibrationOption.name}');
+    } catch (e) {
+      print('❌ 震動預覽失敗，使用備援方案: $e');
+      // 備援：使用原本的方法
+      await playVibration(
+        patternId: patternId,
+        intensity: 0.6,
+        repeat: 1,
+      );
+    }
   }
 
   /// 停止當前震動

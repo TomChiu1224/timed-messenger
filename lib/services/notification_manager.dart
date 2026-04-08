@@ -54,24 +54,47 @@ class NotificationManager {
         },
       );
 
-      // 創建 Android 通知頻道（使用系統預設聲音）
+      // 創建 Android 通知頻道（為每種音效創建獨立頻道）
       if (Platform.isAndroid) {
-        const androidChannel = AndroidNotificationChannel(
-          'timed_messenger_channel',
-          '愛傳時通知',
-          description: '排程訊息提醒通知',
+        // 1. 通知音頻道
+        const notificationChannel = AndroidNotificationChannel(
+          'notification_sound_channel',
+          '通知音',
+          description: '排程訊息提醒 - 通知音',
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
-          // 使用系統預設通知音效，無需自訂音效檔案
         );
 
-        await _flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>()
-            ?.createNotificationChannel(androidChannel);
+        // 2. 系統提示音頻道
+        const alertChannel = AndroidNotificationChannel(
+          'alert_sound_channel',
+          '系統提示音',
+          description: '排程訊息提醒 - 系統提示音',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
 
-        print('✅ Android 通知頻道已創建（使用系統預設音效與震動）');
+        // 3. 點擊音頻道
+        const clickChannel = AndroidNotificationChannel(
+          'click_sound_channel',
+          '點擊音',
+          description: '排程訊息提醒 - 點擊音',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        );
+
+        final androidPlugin = _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+
+        await androidPlugin?.createNotificationChannel(notificationChannel);
+        await androidPlugin?.createNotificationChannel(alertChannel);
+        await androidPlugin?.createNotificationChannel(clickChannel);
+
+        print('✅ Android 通知頻道已創建（三種音效頻道：通知音、系統提示音、點擊音）');
       }
 
       // 請求 iOS 通知權限
@@ -137,28 +160,54 @@ class NotificationManager {
   }
 
   /// 觸發通知（播放音效和震動）
-  Future<void> _triggerNotification(String title, String body) async {
+  /// soundType: notification, alert, click
+  Future<void> _triggerNotification(
+    String title,
+    String body, {
+    String soundType = 'notification',
+    List<int>? vibrationPattern,
+  }) async {
     try {
       // 1. 震動功能（使用 vibration 套件）
       final hasVibrator = await Vibration.hasVibrator();
       if (hasVibrator == true) {
-        // 使用脈衝震動模式（三次短震）
-        await Vibration.vibrate(pattern: [0, 200, 100, 200, 100, 200]);
+        // 使用自訂震動模式或預設脈衝震動模式（三次短震）
+        final pattern = vibrationPattern ?? [0, 200, 100, 200, 100, 200];
+        await Vibration.vibrate(pattern: pattern);
         print('✅ 震動已觸發');
       } else {
         print('⚠️ 設備不支援震動功能');
       }
 
-      // 2. 發出本地通知（使用系統預設聲音）
-      const androidDetails = AndroidNotificationDetails(
-        'timed_messenger_channel',
-        '愛傳時通知',
-        channelDescription: '排程訊息提醒通知',
+      // 2. 根據音效類型選擇對應的通知頻道
+      String channelId;
+      String channelName;
+      switch (soundType) {
+        case 'alert':
+          channelId = 'alert_sound_channel';
+          channelName = '系統提示音';
+          break;
+        case 'click':
+          channelId = 'click_sound_channel';
+          channelName = '點擊音';
+          break;
+        case 'notification':
+        default:
+          channelId = 'notification_sound_channel';
+          channelName = '通知音';
+          break;
+      }
+
+      // 3. 發出本地通知（使用對應頻道的系統音效）
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: '排程訊息提醒通知 - $channelName',
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
-        // 使用系統預設通知音效
+        // 使用對應頻道的系統音效
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -168,7 +217,7 @@ class NotificationManager {
         sound: 'default',
       );
 
-      const notificationDetails = NotificationDetails(
+      final notificationDetails = NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       );
@@ -181,7 +230,7 @@ class NotificationManager {
         payload: body,
       );
 
-      print('🔔 通知觸發成功: $title - $body');
+      print('🔔 通知觸發成功 [$channelName]: $title - $body');
     } catch (e) {
       print('❌ 通知觸發失敗: $e');
       // 備援：至少嘗試簡單震動
@@ -238,14 +287,22 @@ class NotificationManager {
   }
 
   /// 🔔 立即觸發通知（公開方法）
+  /// soundType: notification, alert, click
   Future<void> showNotification({
     required String title,
     required String body,
+    String soundType = 'notification',
+    List<int>? vibrationPattern,
   }) async {
     if (!_isInitialized) {
       await initialize();
     }
-    await _triggerNotification(title, body);
+    await _triggerNotification(
+      title,
+      body,
+      soundType: soundType,
+      vibrationPattern: vibrationPattern,
+    );
   }
 
   /// 🧪 測試通知功能
@@ -261,6 +318,49 @@ class NotificationManager {
       print('❌ 測試通知失敗: $e');
       return false;
     }
+  }
+
+  /// 🔊 預覽音效（發送通知）
+  /// soundType: notification, alert, click
+  Future<void> previewSound(String soundType) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    String soundName;
+    switch (soundType) {
+      case 'alert':
+        soundName = '系統提示音';
+        break;
+      case 'click':
+        soundName = '點擊音';
+        break;
+      case 'notification':
+      default:
+        soundName = '通知音';
+        break;
+    }
+
+    await _triggerNotification(
+      '🔊 音效預覽',
+      '正在播放：$soundName',
+      soundType: soundType,
+      vibrationPattern: [0, 100], // 簡短震動
+    );
+  }
+
+  /// 📳 預覽震動（發送通知並使用指定震動模式）
+  Future<void> previewVibration(List<int> vibrationPattern, {String patternName = '震動'}) async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    await _triggerNotification(
+      '📳 震動預覽',
+      '正在測試：$patternName',
+      soundType: 'notification',
+      vibrationPattern: vibrationPattern,
+    );
   }
 }
 

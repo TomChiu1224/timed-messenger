@@ -1241,26 +1241,25 @@ class _HomePageState extends State<HomePage> {
       ),
     );
 
-    // 通知相關程式碼保持不變...
+    // ✅ 設定背景通知（App關閉時也能觸發）
     final bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
-    // final int newIndex = _scheduledMessages.length - 1;
-    // final int baseId = _notificationId(newIndex);
-    // DateTime fireDate = newMsg.time;
-
-    if (newMsg.repeatType == 'weekly' && isMobile) {
-      // for (var w in newMsg.repeatDays) {
-      //   int id = baseId + w;
-      //   final tzDate = tz.TZDateTime.local(
-      //     fireDate.year,
-      //     fireDate.month,
-      //     fireDate.day + ((w + 7 - fireDate.weekday) % 7),
-      //     fireDate.hour,
-      //     fireDate.minute,
-      //   );
-      //   // flutterLocalNotificationsPlugin.zonedSchedule(...)
-      // }
-    } else if (isMobile) {
-      // _scheduleNotification(baseId, newMsg.message, fireDate);
+    if (isMobile && newMsg.id != null) {
+      try {
+        await notificationManager.scheduleNotification(
+          id: newMsg.id!,
+          title: '⏰ 愛傳時提醒',
+          body: newMsg.message,
+          scheduledTime: newMsg.time,
+          soundType: newMsg.soundEnabled ? newMsg.soundPath : 'notification',
+          vibrationPattern: newMsg.vibrationEnabled
+              ? VibrationManager.getVibrationPatternById(newMsg.vibrationPattern)
+                  ?.pattern
+              : [0, 200, 100, 200, 100, 200],
+        );
+        debugPrint('✅ 已設定背景通知，ID: ${newMsg.id}');
+      } catch (e) {
+        debugPrint('⚠️ 設定背景通知失敗: $e');
+      }
     }
   }
 
@@ -1293,13 +1292,22 @@ class _HomePageState extends State<HomePage> {
     _selectedTags.clear();
   }
 
-  /// 刪除任務 - ✅ 修正版本：使用ID刪除
+  /// 刪除任務 - ✅ 修正版本：使用ID刪除並取消背景通知
   void _deleteMessage(int index) async {
     final msg = _scheduledMessages[index];
-    // final int baseId = _notificationId(index);
     final bool isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
-    // ✅ 修正：使用ID直接刪除
+    // ✅ 取消背景通知
+    if (isMobile && msg.id != null) {
+      try {
+        await notificationManager.cancelNotification(msg.id!);
+        debugPrint('✅ 已取消背景通知 ID: ${msg.id}');
+      } catch (e) {
+        debugPrint('⚠️ 取消背景通知失敗: $e');
+      }
+    }
+
+    // ✅ 從資料庫刪除
     if (msg.id != null) {
       try {
         final dbHelper = DatabaseHelper();
@@ -1310,22 +1318,12 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    // 取消通知（原有邏輯保持不變）
-    if (isMobile) {
-      // if (msg.repeatType == 'weekly') {
-      //   for (var d in msg.repeatDays) {
-      //     // flutterLocalNotificationsPlugin.cancel(baseId + d);
-      //   }
-      // }
-      // flutterLocalNotificationsPlugin.cancel(baseId);
-    }
-
     setState(() {
       _scheduledMessages.removeAt(index);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('排程已刪除！')),
+      const SnackBar(content: Text('✅ 排程與通知已刪除！')),
     );
   }
 

@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 /// 🔧 本地通知管理器
 class NotificationManager {
@@ -18,7 +19,7 @@ class NotificationManager {
 
   bool _isInitialized = false;
   final List<Map<String, dynamic>> _notifications = [];
-  final Map<int, Timer> _scheduledTimers = {};
+  final Map<int, Timer> _scheduledTimers = {}; // 保留用於測試，但主要使用 zonedSchedule
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -118,34 +119,90 @@ class NotificationManager {
     }
   }
 
-  /// 📅 排程通知
+  /// 📅 排程通知（使用真正的背景排程，App關閉也能觸發）
   Future<void> scheduleNotification({
     required int id,
     required String title,
     required String body,
     required DateTime scheduledTime,
-    String? channelId,
-    String? channelName,
+    String? soundType,
+    List<int>? vibrationPattern,
   }) async {
     if (!_isInitialized) {
       await initialize();
     }
 
     try {
-      final now = DateTime.now();
-      final delay = scheduledTime.difference(now);
+      // 轉換為 TZDateTime 用於排程
+      final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-      if (delay.isNegative) {
-        print('⚠️ 排程時間已過，記錄通知: $title');
-      } else {
-        final timer = Timer(delay, () {
-          _triggerNotification(title, body);
-          _scheduledTimers.remove(id);
-        });
-
-        _scheduledTimers[id] = timer;
-        print('⏰ 通知已排程: $title 於 ${scheduledTime.toString()}');
+      final now = tz.TZDateTime.now(tz.local);
+      if (tzScheduledTime.isBefore(now)) {
+        print('⚠️ 排程時間已過，將立即觸發通知: $title');
+        await showNotification(
+          title: title,
+          body: body,
+          soundType: soundType ?? 'notification',
+          vibrationPattern: vibrationPattern,
+        );
+        return;
       }
+
+      // 根據音效類型選擇通知頻道
+      String channelId;
+      String channelName;
+      switch (soundType) {
+        case 'alert':
+          channelId = 'alert_sound_channel';
+          channelName = '系統提示音';
+          break;
+        case 'click':
+          channelId = 'click_sound_channel';
+          channelName = '點擊音';
+          break;
+        case 'notification':
+        default:
+          channelId = 'notification_sound_channel';
+          channelName = '通知音';
+          break;
+      }
+
+      // 設定 Android 通知細節
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        channelName,
+        channelDescription: '排程訊息提醒通知 - $channelName',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+      );
+
+      // 設定 iOS 通知細節
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+      );
+
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      // 使用 zonedSchedule 排程通知（這會在背景執行，即使 App 關閉）
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tzScheduledTime,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: body,
+      );
 
       // 記錄通知
       _notifications.add({
@@ -154,8 +211,11 @@ class NotificationManager {
         'body': body,
         'scheduledTime': scheduledTime.toIso8601String(),
       });
+
+      print('⏰ 背景通知已排程（App關閉也能觸發）: $title 於 ${scheduledTime.toString()}');
     } catch (e) {
       print('❌ 排程通知失敗: $e');
+      rethrow;
     }
   }
 
@@ -242,15 +302,23 @@ class NotificationManager {
     }
   }
 
-  /// 🗑️ 取消通知
+  /// 🗑️ 取消通知（取消背景排程通知）
   Future<void> cancelNotification(int id) async {
     try {
+      // 取消 flutter_local_notifications 的排程通知
+      await _flutterLocalNotificationsPlugin.cancel(id);
+
+      // 清理舊的 Timer（如果有）
       final timer = _scheduledTimers[id];
       if (timer != null) {
         timer.cancel();
         _scheduledTimers.remove(id);
-        print('✅ 通知已取消: ID $id');
       }
+
+      // 移除記錄
+      _notifications.removeWhere((n) => n['id'] == id);
+
+      print('✅ 背景通知已取消: ID $id');
     } catch (e) {
       print('❌ 取消通知失敗: $e');
     }
@@ -259,11 +327,19 @@ class NotificationManager {
   /// 🗑️ 取消所有通知
   Future<void> cancelAllNotifications() async {
     try {
+      // 取消所有 flutter_local_notifications 的排程通知
+      await _flutterLocalNotificationsPlugin.cancelAll();
+
+      // 清理所有 Timer
       for (final timer in _scheduledTimers.values) {
         timer.cancel();
       }
       _scheduledTimers.clear();
-      print('✅ 所有通知已取消');
+
+      // 清空記錄
+      _notifications.clear();
+
+      print('✅ 所有背景通知已取消');
     } catch (e) {
       print('❌ 取消所有通知失敗: $e');
     }

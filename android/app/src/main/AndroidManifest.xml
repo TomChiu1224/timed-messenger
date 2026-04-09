@@ -48,6 +48,7 @@
         <!-- ✅ Flutter 本地通知插件設定 -->
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:enabled="true"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
@@ -59,6 +60,7 @@
 
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:enabled="true"
             android:exported="false" />
 
         <!-- ✅ Firebase Cloud Messaging 服務 -->

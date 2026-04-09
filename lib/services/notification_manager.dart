@@ -6,6 +6,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
@@ -65,6 +66,7 @@ class NotificationManager {
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
         // 2. 系統提示音頻道
@@ -75,6 +77,7 @@ class NotificationManager {
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
         // 3. 點擊音頻道
@@ -85,6 +88,7 @@ class NotificationManager {
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
+          vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
         final androidPlugin = _flutterLocalNotificationsPlugin
@@ -176,6 +180,9 @@ class NotificationManager {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
+        vibrationPattern: vibrationPattern != null
+            ? Int64List.fromList(vibrationPattern)
+            : const Int64List.fromList([0, 200, 100, 200, 100, 200]),
       );
 
       // 設定 iOS 通知細節
@@ -267,6 +274,9 @@ class NotificationManager {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
+        vibrationPattern: vibrationPattern != null
+            ? Int64List.fromList(vibrationPattern)
+            : const Int64List.fromList([0, 200, 100, 200, 100, 200]),
         // 使用對應頻道的系統音效
       );
 

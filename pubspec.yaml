@@ -49,6 +49,10 @@ dependencies:
   # ========== 付費訂閱功能 ==========
   in_app_purchase: ^3.2.0           # 應用內購買功能
 
+  # ========== 權限管理（背景通知引導）==========
+  permission_handler: ^11.0.1       # 權限檢查與引導
+  android_intent_plus: ^4.0.3       # Android 設定頁面跳轉
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

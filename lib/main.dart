@@ -22,6 +22,7 @@ import 'package:intl/intl.dart';
 import 'services/audio_manager.dart'; // 之前加入的音效引用
 import 'services/vibration_manager.dart'; // 新加入的震動引用
 import 'services/notification_manager.dart'; // 本地通知管理器
+import 'services/permission_guide.dart'; // ✅ 背景通知權限引導
 import 'models/scheduled_message.dart';
 import 'models/task_category.dart';
 import 'models/sound_settings.dart';
@@ -244,6 +245,11 @@ class _HomePageState extends State<HomePage> {
     // ✅ 載入資料庫中的排程訊息
     _loadMessagesFromDatabase();
     _loadCategories();
+
+    // ✅ 背景通知權限引導（首次啟動時）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PermissionGuide.performPermissionCheck(context);
+    });
 
     // ✅ 保持完整的 Timer 邏輯（整合音效+震動播放）
     Timer.periodic(const Duration(seconds: 1), (timer) {

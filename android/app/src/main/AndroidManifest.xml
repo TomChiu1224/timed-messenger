@@ -20,6 +20,9 @@
     <!-- ✅ 喚醒鎖定權限（確保排程準時觸發）-->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
+    <!-- ✅ 電池優化豁免權限（小米/華為/OPPO 等品牌必須）-->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+
     <application
         android:label="愛傳時"
         android:name="${applicationName}"

@@ -27,6 +27,35 @@ class NotificationManager {
   /// 檢查是否已初始化
   bool get isInitialized => _isInitialized;
 
+  /// 🔧 檢查並請求 Android 精確鬧鐘權限（Android 12+）
+  Future<bool> checkExactAlarmPermission() async {
+    if (Platform.isAndroid) {
+      try {
+        final androidPlugin = _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+
+        // Android 12+ 需要檢查精確鬧鐘權限
+        final canScheduleExactAlarms = await androidPlugin?.canScheduleExactNotifications();
+
+        if (canScheduleExactAlarms == false) {
+          print('⚠️ 未授權精確鬧鐘權限！');
+          print('   請前往：設定 > 應用程式 > 愛傳時 > 鬧鐘與提醒');
+
+          // 嘗試請求權限
+          await androidPlugin?.requestExactAlarmsPermission();
+          return false;
+        } else if (canScheduleExactAlarms == true) {
+          print('✅ 已授權精確鬧鐘權限');
+          return true;
+        }
+      } catch (e) {
+        print('⚠️ 無法檢查精確鬧鐘權限（可能是舊版 Android）: $e');
+      }
+    }
+    return true; // iOS 或舊版 Android 不需要此權限
+  }
+
   /// 🔧 初始化通知管理器
   Future<void> initialize() async {
     if (_isInitialized) {
@@ -56,9 +85,10 @@ class NotificationManager {
         },
       );
 
-      // 創建 Android 通知頻道（為每種音效創建獨立頻道）
+      // 創建 Android 通知頻道（為每種音效創建獨立頻道，區分排程和預覽）
       if (Platform.isAndroid) {
-        // 1. 通知音頻道
+        // === 排程通知頻道（有震動）===
+        // 1. 通知音頻道（排程用）
         const notificationChannel = AndroidNotificationChannel(
           'notification_sound_channel',
           '通知音',
@@ -69,7 +99,7 @@ class NotificationManager {
           vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
-        // 2. 系統提示音頻道
+        // 2. 系統提示音頻道（排程用）
         const alertChannel = AndroidNotificationChannel(
           'alert_sound_channel',
           '系統提示音',
@@ -80,7 +110,7 @@ class NotificationManager {
           vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
-        // 3. 點擊音頻道
+        // 3. 點擊音頻道（排程用）
         const clickChannel = AndroidNotificationChannel(
           'click_sound_channel',
           '點擊音',
@@ -91,15 +121,55 @@ class NotificationManager {
           vibrationPattern: Int64List.fromList([0, 200, 100, 200, 100, 200]),
         );
 
+        // === 預覽頻道（無震動，僅音效）===
+        // 4. 通知音預覽頻道（無震動）
+        const notificationPreviewChannel = AndroidNotificationChannel(
+          'notification_sound_preview_channel',
+          '通知音預覽',
+          description: '音效試聽 - 通知音（僅聲音無震動）',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: false, // 🔇 預覽時不震動
+        );
+
+        // 5. 系統提示音預覽頻道（無震動）
+        const alertPreviewChannel = AndroidNotificationChannel(
+          'alert_sound_preview_channel',
+          '系統提示音預覽',
+          description: '音效試聽 - 系統提示音（僅聲音無震動）',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: false, // 🔇 預覽時不震動
+        );
+
+        // 6. 點擊音預覽頻道（無震動）
+        const clickPreviewChannel = AndroidNotificationChannel(
+          'click_sound_preview_channel',
+          '點擊音預覽',
+          description: '音效試聽 - 點擊音（僅聲音無震動）',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: false, // 🔇 預覽時不震動
+        );
+
         final androidPlugin = _flutterLocalNotificationsPlugin
             .resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
 
+        // 創建排程通知頻道
         await androidPlugin?.createNotificationChannel(notificationChannel);
         await androidPlugin?.createNotificationChannel(alertChannel);
         await androidPlugin?.createNotificationChannel(clickChannel);
 
-        print('✅ Android 通知頻道已創建（三種音效頻道：通知音、系統提示音、點擊音）');
+        // 創建預覽頻道
+        await androidPlugin?.createNotificationChannel(notificationPreviewChannel);
+        await androidPlugin?.createNotificationChannel(alertPreviewChannel);
+        await androidPlugin?.createNotificationChannel(clickPreviewChannel);
+
+        print('✅ Android 通知頻道已創建（6個頻道：3個排程+3個預覽無震動）');
+
+        // 檢查精確鬧鐘權限（Android 12+）
+        await checkExactAlarmPermission();
       }
 
       // 請求 iOS 通知權限
@@ -137,6 +207,16 @@ class NotificationManager {
     }
 
     try {
+      // 🔧 確保 timezone 已初始化
+      try {
+        tz.local; // 測試是否可以訪問 tz.local
+      } catch (e) {
+        print('❌ Timezone 未初始化，嘗試重新初始化...');
+        tz.initializeTimeZones();
+        tz.setLocalLocation(tz.getLocation('Asia/Taipei'));
+        print('✅ Timezone 重新初始化完成');
+      }
+
       // 轉換為 TZDateTime 用於排程
       final tzScheduledTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
@@ -151,6 +231,12 @@ class NotificationManager {
         );
         return;
       }
+
+      print('📅 準備排程通知: $title');
+      print('   ├─ ID: $id');
+      print('   ├─ 排程時間: ${tzScheduledTime.toString()}');
+      print('   ├─ 當前時間: ${now.toString()}');
+      print('   └─ 音效類型: ${soundType ?? 'notification'}');
 
       // 根據音效類型選擇通知頻道
       String channelId;
@@ -219,9 +305,24 @@ class NotificationManager {
         'scheduledTime': scheduledTime.toIso8601String(),
       });
 
-      print('⏰ 背景通知已排程（App關閉也能觸發）: $title 於 ${scheduledTime.toString()}');
-    } catch (e) {
-      print('❌ 排程通知失敗: $e');
+      print('✅ 背景通知已排程成功！');
+      print('   ├─ 標題: $title');
+      print('   ├─ 內容: $body');
+      print('   ├─ 排程時間: ${scheduledTime.toString()}');
+      print('   ├─ 頻道: $channelName');
+      print('   ├─ 模式: exactAllowWhileIdle');
+      print('   └─ ⚠️ 請確保已授權「精確鬧鐘」權限！');
+    } catch (e, stackTrace) {
+      print('❌ 排程通知失敗！');
+      print('   ├─ 錯誤: $e');
+      print('   └─ 堆疊: $stackTrace');
+
+      // 檢查是否是權限問題
+      if (e.toString().contains('SCHEDULE_EXACT_ALARM')) {
+        print('⚠️ 可能需要手動授權「精確鬧鐘」權限！');
+        print('   前往：設定 > 應用程式 > 愛傳時 > 鬧鐘與提醒');
+      }
+
       rethrow;
     }
   }
@@ -406,7 +507,7 @@ class NotificationManager {
     }
   }
 
-  /// 🔊 預覽音效（發送通知）
+  /// 🔊 預覽音效（發送通知，僅聲音無震動）
   /// soundType: notification, alert, click
   Future<void> previewSound(String soundType) async {
     if (!_isInitialized) {
@@ -414,39 +515,84 @@ class NotificationManager {
     }
 
     String soundName;
+    String previewChannelId;
+    String previewChannelName;
+
     switch (soundType) {
       case 'alert':
         soundName = '系統提示音';
+        previewChannelId = 'alert_sound_preview_channel';
+        previewChannelName = '系統提示音預覽';
         break;
       case 'click':
         soundName = '點擊音';
+        previewChannelId = 'click_sound_preview_channel';
+        previewChannelName = '點擊音預覽';
         break;
       case 'notification':
       default:
         soundName = '通知音';
+        previewChannelId = 'notification_sound_preview_channel';
+        previewChannelName = '通知音預覽';
         break;
     }
 
-    await _triggerNotification(
-      '🔊 音效預覽',
-      '正在播放：$soundName',
-      soundType: soundType,
-      vibrationPattern: [0, 100], // 簡短震動
-    );
+    // 🔇 使用無震動的預覽頻道發送通知
+    try {
+      final androidDetails = AndroidNotificationDetails(
+        previewChannelId,
+        previewChannelName,
+        channelDescription: '音效試聽 - $soundName（僅聲音無震動）',
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: false, // 🔇 預覽時絕對不震動
+      );
+
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+      );
+
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        '🔊 音效預覽',
+        '正在播放：$soundName',
+        notificationDetails,
+        payload: '音效預覽',
+      );
+
+      print('🔊 音效預覽已發送（無震動）: $soundName');
+    } catch (e) {
+      print('❌ 音效預覽失敗: $e');
+    }
   }
 
-  /// 📳 預覽震動（發送通知並使用指定震動模式）
+  /// 📳 預覽震動（僅震動，不發出通知聲音）
   Future<void> previewVibration(List<int> vibrationPattern, {String patternName = '震動'}) async {
     if (!_isInitialized) {
       await initialize();
     }
 
-    await _triggerNotification(
-      '📳 震動預覽',
-      '正在測試：$patternName',
-      soundType: 'notification',
-      vibrationPattern: vibrationPattern,
-    );
+    try {
+      // 🔇 直接震動，不發送通知（避免音效干擾）
+      final hasVibrator = await Vibration.hasVibrator();
+      if (hasVibrator == true) {
+        await Vibration.vibrate(pattern: vibrationPattern);
+        print('📳 震動預覽已觸發: $patternName - ${vibrationPattern}');
+      } else {
+        print('⚠️ 設備不支援震動功能');
+      }
+    } catch (e) {
+      print('❌ 震動預覽失敗: $e');
+    }
   }
 }
 

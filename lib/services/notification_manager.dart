@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 
 /// 🔧 本地通知管理器
 class NotificationManager {
@@ -89,7 +90,7 @@ class NotificationManager {
       if (Platform.isAndroid) {
         // === 排程通知頻道（有震動）===
         // 1. 通知音頻道（排程用）
-        const notificationChannel = AndroidNotificationChannel(
+        final notificationChannel = AndroidNotificationChannel(
           'notification_sound_channel',
           '通知音',
           description: '排程訊息提醒 - 通知音',
@@ -100,7 +101,7 @@ class NotificationManager {
         );
 
         // 2. 系統提示音頻道（排程用）
-        const alertChannel = AndroidNotificationChannel(
+        final alertChannel = AndroidNotificationChannel(
           'alert_sound_channel',
           '系統提示音',
           description: '排程訊息提醒 - 系統提示音',
@@ -111,7 +112,7 @@ class NotificationManager {
         );
 
         // 3. 點擊音頻道（排程用）
-        const clickChannel = AndroidNotificationChannel(
+        final clickChannel = AndroidNotificationChannel(
           'click_sound_channel',
           '點擊音',
           description: '排程訊息提醒 - 點擊音',
@@ -268,7 +269,7 @@ class NotificationManager {
         enableVibration: true,
         vibrationPattern: vibrationPattern != null
             ? Int64List.fromList(vibrationPattern)
-            : const Int64List.fromList([0, 200, 100, 200, 100, 200]),
+            : Int64List.fromList([0, 200, 100, 200, 100, 200]),
       );
 
       // 設定 iOS 通知細節
@@ -377,7 +378,7 @@ class NotificationManager {
         enableVibration: true,
         vibrationPattern: vibrationPattern != null
             ? Int64List.fromList(vibrationPattern)
-            : const Int64List.fromList([0, 200, 100, 200, 100, 200]),
+            : Int64List.fromList([0, 200, 100, 200, 100, 200]),
         // 使用對應頻道的系統音效
       );
 

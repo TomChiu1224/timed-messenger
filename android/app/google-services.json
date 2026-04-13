@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "718181282115",
+    "project_id": "timed-messenger-app-8263f",
+    "storage_bucket": "timed-messenger-app-8263f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718181282115:android:e30fd023ff1a66cb3cbff6",
+        "android_client_info": {
+          "package_name": "com.example.timed_messenger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718181282115-vj9osp9u1cvmtaiffv9mh7c8sbsl99b7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.timed_messenger",
+            "certificate_hash": "2acdf4fc30fe23855c856ae9d07d2c7dfd5adfdb"
+          }
+        },
+        {
+          "client_id": "718181282115-qmlj8479k9vk06fi5ksciiaeo7ifi35m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArPo3fXFIDUsE3UpBShsrCxIGcUtpMx4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718181282115-qmlj8479k9vk06fi5ksciiaeo7ifi35m.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "718181282115-k683857bsde80e6s4e7lselpsqk0i7dm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.timedmessenger.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

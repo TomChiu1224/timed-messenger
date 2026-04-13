@@ -135,8 +135,7 @@ class MyApp extends StatelessWidget {
   final ThemeManager themeManager;
   final FirebaseService? firebaseService;
 
-  const MyApp(
-      {super.key, required this.themeManager, this.firebaseService});
+  const MyApp({super.key, required this.themeManager, this.firebaseService});
 
   @override
   Widget build(BuildContext context) {
@@ -167,8 +166,7 @@ class MyApp extends StatelessWidget {
                     return const LoginPage();
                   },
                 )
-              : HomePage(
-                  themeManager: themeManager), // 桌面平台直接顯示主頁（無需登入）
+              : HomePage(themeManager: themeManager), // 桌面平台直接顯示主頁（無需登入）
         );
       },
     );
@@ -1253,14 +1251,17 @@ class _HomePageState extends State<HomePage> {
       try {
         await notificationManager.scheduleNotification(
           id: newMsg.id!,
-          title: '⏰ 愛傳時提醒',
+          title: '🔔 愛傳時提醒',
           body: newMsg.message,
           scheduledTime: newMsg.time,
           soundType: newMsg.soundEnabled ? newMsg.soundPath : 'notification',
-          vibrationPattern: newMsg.vibrationEnabled
-              ? VibrationManager.getVibrationPatternById(newMsg.vibrationPattern)
-                  ?.pattern
-              : [0, 200, 100, 200, 100, 200],
+          vibrationEnabled: newMsg.vibrationEnabled,
+          vibrationPattern:
+              VibrationManager.getVibrationPatternById(newMsg.vibrationPattern)
+                      ?.pattern ??
+                  [0, 300, 100, 300],
+          vibrationRepeat: newMsg.vibrationRepeat,
+          soundRepeat: newMsg.soundRepeat,
         );
         debugPrint('✅ 已設定背景通知，ID: ${newMsg.id}');
       } catch (e) {
@@ -2107,7 +2108,35 @@ class _HomePageState extends State<HomePage> {
                 });
 
                 Navigator.pop(context);
-
+                //✅ 重新排程通知
+                final bool isMobile =
+                    !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+                if (isMobile &&
+                    msg.id != null &&
+                    newTime.isAfter(DateTime.now())) {
+                  try {
+                    await notificationManager.cancelNotification(msg.id!);
+                    await notificationManager.scheduleNotification(
+                      id: msg.id!,
+                      title: '🔔 愛傳時提醒',
+                      body: msg.message,
+                      scheduledTime: newTime,
+                      soundType:
+                          editSoundEnabled ? editSoundId : 'notification',
+                      vibrationEnabled: editVibrationEnabled,
+                      vibrationPattern:
+                          VibrationManager.getVibrationPatternById(
+                                      editVibrationPattern)
+                                  ?.pattern ??
+                              [0, 300, 100, 300],
+                      vibrationRepeat: editVibrationRepeat,
+                      soundRepeat: editSoundRepeat,
+                    );
+                    debugPrint('✅ 編輯後重新排程通知成功');
+                  } catch (e) {
+                    debugPrint('⚠️ 重新排程通知失敗: $e');
+                  }
+                }
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('排程已更新！')),
                 );
@@ -2720,7 +2749,8 @@ class _HomePageState extends State<HomePage> {
                                                     Platform.isIOS);
                                             if (isMobile) {
                                               // ✅ 移動平台：發送測試通知（確保 Android 有聲音）
-                                              notificationManager.showNotification(
+                                              notificationManager
+                                                  .showNotification(
                                                 title: '🔊 試聽音效',
                                                 body: '這是音效測試通知',
                                               );

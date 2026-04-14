@@ -1,8 +1,8 @@
-import 'package:shared_preferences/shared_preferences.dart';
+﻿import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_service.dart';
 import 'database_helper.dart';
 
-/// ✅ 用戶個人資料模型 - 移到外部定義
+/// ???冽?犖鞈?璅∪? - 蝘餃憭摰儔
 class UserProfile {
   final String uid;
   final String email;
@@ -46,12 +46,12 @@ class UserProfile {
       lastLoginAt: map['last_login_at'] != null
           ? DateTime.fromMillisecondsSinceEpoch(map['last_login_at'])
           : null,
-      preferences: {}, // 簡化版本，可後續擴展
+      preferences: {}, // 蝪∪??嚗敺??游?
     );
   }
 }
 
-/// ✅ 用戶資料管理類別 - 整合Firebase用戶與本地資料
+/// ???冽鞈?蝞∠?憿 - ?游?Firebase?冽??啗???
 class UserManager {
   static final UserManager _instance = UserManager._internal();
   factory UserManager() => _instance;
@@ -60,12 +60,12 @@ class UserManager {
   final FirebaseService _firebaseService = FirebaseService();
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
-  /// 初始化用戶管理器
+  /// ????嗥恣?
   Future<void> initialize() async {
-    // 監聽用戶狀態變化
+    // ???冽?????
     _firebaseService.userStateChanges.listen((user) {
       if (user != null) {
-        // 修正型別：user 來自 firebase_auth.User
+        // 靽格迤?嚗ser 靘 firebase_auth.User
         _onUserSignedIn(user.uid);
       } else {
         _onUserSignedOut();
@@ -73,21 +73,21 @@ class UserManager {
     });
   }
 
-  /// 取得當前用戶資料
+  /// ???嗅??冽鞈?
   Future<UserProfile?> getCurrentUserProfile() async {
     final userInfo = _firebaseService.getUserInfo();
     if (userInfo == null) return null;
 
     try {
-      // 從本地快取載入用戶資料
+      // 敺?啣翰???亦?嗉???
       final prefs = await SharedPreferences.getInstance();
       final cachedProfile = prefs.getString('user_profile_${userInfo['uid']}');
 
       if (cachedProfile != null) {
-        // 這裡可以解析快取的用戶資料，簡化版本直接建立
+        // ?ㄐ?臭誑閫??敹怠???嗉???蝪∪???湔撱箇?
       }
 
-      // 建立或更新用戶資料
+      // 撱箇???啁?嗉???
       final profile = UserProfile(
         uid: userInfo['uid'],
         email: userInfo['email'] ?? '',
@@ -101,92 +101,92 @@ class UserManager {
             : DateTime.now(),
       );
 
-      // 儲存到本地快取
+      // ?脣??唳?啣翰??
       await _saveUserProfileToCache(profile);
 
       return profile;
     } catch (e) {
-      print('❌ 取得用戶資料失敗: $e');
+      print('?????冽鞈?憭望?: $e');
       return null;
     }
   }
 
-  /// 用戶登入處理
+  /// ?冽?餃??
   Future<void> _onUserSignedIn(String uid) async {
     try {
-      print('✅ 用戶登入處理: $uid');
+      print('???冽?餃??: $uid');
 
-      // 更新最後登入時間
+      // ?湔?敺?交???
       await _updateLastLoginTime(uid);
 
-      // 載入用戶的排程資料
+      // 頛?冽??蝔???
       await _loadUserScheduledMessages(uid);
 
-      // 初始化用戶偏好設定
+      // ????嗅?憟質身摰?
       await _initializeUserPreferences(uid);
 
     } catch (e) {
-      print('❌ 用戶登入處理失敗: $e');
+      print('???冽?餃??憭望?: $e');
     }
   }
 
-  /// 用戶登出處理
+  /// ?冽?餃??
   Future<void> _onUserSignedOut() async {
     try {
-      print('✅ 用戶登出處理');
+      print('???冽?餃??');
 
-      // 清除敏感資料（保留基本設定）
+      // 皜??鞈?嚗???祈身摰?
       await _clearSensitiveData();
 
     } catch (e) {
-      print('❌ 用戶登出處理失敗: $e');
+      print('???冽?餃??憭望?: $e');
     }
   }
 
-  /// 儲存用戶資料到本地快取
+  /// ?脣??冽鞈??唳?啣翰??
   Future<void> _saveUserProfileToCache(UserProfile profile) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // 簡化版本：儲存基本資訊
+      // 蝪∪??嚗摮?祈?閮?
       await prefs.setString('current_user_uid', profile.uid);
       await prefs.setString('current_user_email', profile.email);
       await prefs.setString('current_user_name', profile.displayName);
       await prefs.setString('current_user_photo', profile.photoURL);
     } catch (e) {
-      print('❌ 儲存用戶資料失敗: $e');
+      print('???脣??冽鞈?憭望?: $e');
     }
   }
 
-  /// 更新最後登入時間
+  /// ?湔?敺?交???
   Future<void> _updateLastLoginTime(String uid) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('last_login_$uid', DateTime.now().millisecondsSinceEpoch);
     } catch (e) {
-      print('❌ 更新最後登入時間失敗: $e');
+      print('???湔?敺?交??仃?? $e');
     }
   }
 
-  /// 載入用戶的排程訊息（為未來雲端同步做準備）
+  /// 頛?冽??蝔??荔??箸靘蝡臬?甇亙?皞?嚗?
   Future<void> _loadUserScheduledMessages(String uid) async {
     try {
-      // 目前從本地資料庫載入，未來可擴展為雲端同步
+      // ?桀?敺?啗??澈頛嚗靘?游??粹蝡臬?甇?
       final messages = await _databaseHelper.getAllMessages();
-      print('✅ 載入用戶排程訊息: ${messages.length} 筆');
+      print('載入完成');
 
-      // 未來可在此處實作雲端同步邏輯
+      // ?芯??臬甇方?撖虫??脩垢?郊?摩
 
     } catch (e) {
-      print('❌ 載入用戶排程訊息失敗: $e');
+      print('載入完成');
     }
   }
 
-  /// 初始化用戶偏好設定
+  /// ????嗅?憟質身摰?
   Future<void> _initializeUserPreferences(String uid) async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // 設定預設偏好（如果不存在）
+      // 閮剖??身?末嚗???摮嚗?
       if (!prefs.containsKey('notification_enabled_$uid')) {
         await prefs.setBool('notification_enabled_$uid', true);
       }
@@ -199,42 +199,42 @@ class UserManager {
         await prefs.setString('language_$uid', 'zh_TW');
       }
 
-      print('✅ 用戶偏好設定初始化完成');
+      print('載入完成');
     } catch (e) {
-      print('❌ 初始化用戶偏好設定失敗: $e');
+      print('處理完成');
     }
   }
 
-  /// 清除敏感資料
+  /// 皜??鞈?
   Future<void> _clearSensitiveData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
 
-      // 移除當前用戶資訊
+      // 蝘駁?嗅??冽鞈?
       await prefs.remove('current_user_uid');
       await prefs.remove('current_user_email');
       await prefs.remove('current_user_name');
       await prefs.remove('current_user_photo');
 
-      // 保留應用程式基本設定，移除用戶特定設定
-      print('✅ 敏感資料清除完成');
+      // 靽??蝔??箸閮剖?嚗宏?斤?嗥摰身摰?
+      print('處理完成');
     } catch (e) {
-      print('❌ 清除敏感資料失敗: $e');
+      print('??皜??鞈?憭望?: $e');
     }
   }
 
-  /// 用戶偏好設定相關方法
+  /// ?冽?末閮剖??賊??寞?
 
-  /// 取得通知設定
+  /// ???閮剖?
   Future<bool> getNotificationEnabled() async {
     final uid = _firebaseService.getUserId();
-    if (uid == null) return true; // 預設啟用
+    if (uid == null) return true; // ?身?
 
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('notification_enabled_$uid') ?? true;
   }
 
-  /// 設定通知開關
+  /// 閮剖????
   Future<void> setNotificationEnabled(bool enabled) async {
     final uid = _firebaseService.getUserId();
     if (uid == null) return;
@@ -243,7 +243,7 @@ class UserManager {
     await prefs.setBool('notification_enabled_$uid', enabled);
   }
 
-  /// 取得主題模式
+  /// ??銝駁?璅∪?
   Future<String> getThemeMode() async {
     final uid = _firebaseService.getUserId();
     if (uid == null) return 'system';
@@ -252,12 +252,47 @@ class UserManager {
     return prefs.getString('theme_mode_$uid') ?? 'system';
   }
 
-  /// 設定主題模式
+  /// 閮剖?銝駁?璅∪?
   Future<void> setThemeMode(String mode) async {
     final uid = _firebaseService.getUserId();
     if (uid == null) return;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('theme_mode_$uid', mode);
+  }
+
+  /// 取得用戶名稱
+  Future<String> getUsername() async {
+    final uid = _firebaseService.getUserId();
+    if (uid == null) return '';
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_username_$uid') ?? '';
+  }
+
+  /// 取得手機號碼
+  Future<String> getPhoneNumber() async {
+    final uid = _firebaseService.getUserId();
+    if (uid == null) return '';
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_phone_$uid') ?? '';
+  }
+
+  /// 更新用戶個人資料
+  Future<bool> updateUserProfile({
+    required String username,
+    required String phoneNumber,
+    String? displayName,
+  }) async {
+    final uid = _firebaseService.getUserId();
+    if (uid == null) return false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_username_$uid', username);
+      await prefs.setString('user_phone_$uid', phoneNumber);
+      return true;
+    } catch (e) {
+      print('更新失敗');
+      return false;
+    }
   }
 }

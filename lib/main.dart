@@ -36,6 +36,8 @@ import 'package:timezone/timezone.dart' as tz;
 
 // ✅ 資料庫助手
 import 'database_helper.dart';
+import 'user_settings_page.dart';
+import 'friends_page.dart';
 
 // ✅ 剪貼板功能
 import 'package:flutter/services.dart';
@@ -2410,6 +2412,22 @@ class _HomePageState extends State<HomePage> {
                         builder: (context) => const SubscriptionPage()),
                   );
                   break;
+                case 'friends':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FriendsPage(),
+                    ),
+                  );
+                  break;
+
+                case 'account':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const UserSettingsPage()),
+                  );
+                  break;
 
                 case 'info':
                   _showAppInfo();
@@ -2460,6 +2478,25 @@ class _HomePageState extends State<HomePage> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+
+              const PopupMenuItem<String>(
+                value: 'friends',
+                child: ListTile(
+                  leading: Icon(Icons.people, color: Colors.purple),
+                  title: Text('好友'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+
+              const PopupMenuItem<String>(
+                value: 'account',
+                child: ListTile(
+                  leading: Icon(Icons.account_circle, color: Colors.purple),
+                  title: Text('帳號設定'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+
               const PopupMenuItem<String>(
                 value: 'info',
                 child: ListTile(

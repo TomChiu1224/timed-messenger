@@ -20,18 +20,22 @@
 
 ---
 
-## ⏳ 待完成任務
+## ✅ 已完成任務（2026-04-17）
 
-### 任務6：收件匣未讀 Badge
-- 在 AppBar 或底部導覽列的收件匣圖示上顯示未讀數量紅點
+### 任務6：收件匣未讀 Badge ✅
+- 在 AppBar 新增收件匣按鈕（帶紅色數字 badge）
 - 查詢 Firebase `scheduled_messages` collection 中 `receiverId = 當前用戶 uid` 且 `status = 'scheduled'` 的訊息數量
 - 數量為 0 時不顯示紅點
+- 使用 StreamSubscription 即時監聽未讀數量變化
 
-### 任務7：發件人已讀回執
-- 在排程列表每則訊息下方顯示已讀狀態
-- 從 Firestore 查詢對應訊息的 `status` 欄位
-- 已讀顯示「✅ 已讀」、未讀顯示「⏳ 未讀」
-- 當收件人點開訊息時，呼叫 `markMessageAsRead` 將 status 改為 'read'
+### 任務7：發件人已讀回執 ✅
+- 新增 `lib/inbox_page.dart` 收件匣頁面
+- 用戶點開訊息時自動呼叫 `markMessageAsRead` 將 status 改為 'read'
+- 更新 `messaging_service.dart` 新增收件匣相關方法
+
+---
+
+## ⏳ 待完成任務
 
 ### 任務8：群發功能（未來開發）
 - 在新增排程頁面，收件人欄位改為可多選（從好友列表勾選多人）

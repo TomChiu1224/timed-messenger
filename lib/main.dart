@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // ✅ 新增
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ FCM 推播通知
 import 'firebase_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/fcm_service.dart'; // ✅ FCM 服務
 import 'modules/auth/views/login_page.dart';
 import 'modules/auth/services/auth_service.dart';
@@ -36,6 +37,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 // ✅ 資料庫助手
 import 'database_helper.dart';
+import 'inbox_page.dart';
 import 'user_settings_page.dart';
 import 'friends_page.dart';
 
@@ -189,6 +191,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _currentIndex = 0;
   late ThemeManager _themeManager;
+
+  // ✅ 群發收件人
+  final FirebaseService _firebaseService = FirebaseService();
+  List<Map<String, dynamic>> _selectedReceivers = [];
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -235,6 +241,13 @@ class _HomePageState extends State<HomePage> {
   List<TaskCategory> _categories = [];
   final List<String> _selectedTags = [];
 
+  // ✅ 收件人相關
+  String? _selectedReceiverId;
+  String? _selectedReceiverName;
+
+  List<Map<String, dynamic>> _friendsList = [];
+  bool _loadingFriends = false;
+
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
   @override
@@ -245,6 +258,7 @@ class _HomePageState extends State<HomePage> {
     // ✅ 載入資料庫中的排程訊息
     _loadMessagesFromDatabase();
     _loadCategories();
+    _loadFriends();
 
     // ✅ 背景通知權限引導（首次啟動時）
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1123,6 +1137,118 @@ class _HomePageState extends State<HomePage> {
 // ========== 愛傳時APP - 第4段：新增任務方法、編輯任務對話框（整合音效功能）==========
 
   /// ✅ 改善版新增任務方法 - 加入驗證和衝突檢查 + 時區支援 + 音效設定
+
+  /// ✅ 開啟好友多選對話框
+  Future<void> _showReceiverSelector() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ 請先登入才能選擇收件人')),
+      );
+      return;
+    }
+
+    // 顯示載入中
+    List<Map<String, dynamic>> friendList = [];
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('friendships')
+          .doc(currentUser.uid)
+          .collection('friends')
+          .where('status', isEqualTo: 'accepted')
+          .get();
+
+      for (final doc in snapshot.docs) {
+        final friendUid = doc.id;
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(friendUid)
+            .get();
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          friendList.add({
+            'uid': friendUid,
+            'displayName': data['displayName'] ?? data['username'] ?? '未知用戶',
+            'username': data['username'] ?? '',
+            'email': data['email'] ?? '',
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ 讀取好友清單失敗: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ 讀取好友清單失敗，請檢查網路')),
+      );
+      return;
+    }
+
+    if (friendList.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ 目前沒有好友，請先到好友頁面新增好友')),
+      );
+      return;
+    }
+
+    // 記錄目前已選的 uid
+    List<String> tempSelectedUids =
+        _selectedReceivers.map((r) => r['uid'] as String).toList();
+
+    final result = await showDialog<List<Map<String, dynamic>>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('選擇收件人'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: friendList.length,
+              itemBuilder: (context, index) {
+                final friend = friendList[index];
+                final isSelected = tempSelectedUids.contains(friend['uid']);
+                return CheckboxListTile(
+                  title: Text(friend['displayName']),
+                  subtitle: Text(friend['email']),
+                  value: isSelected,
+                  onChanged: (checked) {
+                    setDialogState(() {
+                      if (checked == true) {
+                        tempSelectedUids.add(friend['uid']);
+                      } else {
+                        tempSelectedUids.remove(friend['uid']);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('取消'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final selected = friendList
+                    .where((f) => tempSelectedUids.contains(f['uid']))
+                    .toList();
+                Navigator.pop(context, selected);
+              },
+              child: Text('確定（已選 ${tempSelectedUids.length} 人）'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedReceivers = result;
+      });
+    }
+  }
+
   void _addMessage() async {
     // ✅ 驗證訊息內容
     if (_messageController.text.trim().isEmpty) {
@@ -1193,6 +1319,8 @@ class _HomePageState extends State<HomePage> {
       // ✅ 分類設定
       categoryId: _selectedCategoryId,
       tags: List.from(_selectedTags),
+      receiverId: _selectedReceiverId,
+      receiverName: _selectedReceiverName,
     );
 
     // 儲存到資料庫
@@ -1201,7 +1329,38 @@ class _HomePageState extends State<HomePage> {
       final int insertedId = await dbHelper.insertMessage(newMsg.toMap());
       newMsg.id = insertedId;
       debugPrint('✅ 排程已儲存到資料庫，ID: $insertedId，音效: ${newMsg.soundPath}');
-      MessagingService.addMessage(newMsg.toMap()); // ← 新增：同步存到雲端
+      MessagingService.addMessage(newMsg.toMap()); // ← 新增：同
+
+      // ✅ 如果有選擇收件人，同步儲存到 Firestore
+      if (_selectedReceivers.isNotEmpty) {
+        final success = await _firebaseService.saveScheduledMessageToMultiple(
+          messageData: {
+            'message': newMsg.message,
+            'scheduledTime': newMsg.time.millisecondsSinceEpoch,
+            'targetTimeZone': newMsg.targetTimeZone,
+          },
+          receivers: _selectedReceivers,
+        );
+        if (success && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('📨 已排程傳送給 ${_selectedReceivers.length} 位收件人'),
+              backgroundColor: Colors.blue,
+            ),
+          );
+          setState(() {
+            _selectedReceivers = [];
+          });
+        }
+      } else if (_selectedReceiverId != null) {
+        await FirebaseService().saveScheduledMessage({
+          'receiverId': _selectedReceiverId,
+          'receiverName': _selectedReceiverName,
+          'message': newMsg.message,
+          'scheduledTime': newMsg.time.millisecondsSinceEpoch,
+          'targetTimeZone': newMsg.targetTimeZone,
+        });
+      }
     } catch (e) {
       debugPrint('❌ 儲存到資料庫失敗: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1299,6 +1458,9 @@ class _HomePageState extends State<HomePage> {
     // ✅ 重設分類相關變數
     _selectedCategoryId = null;
     _selectedTags.clear();
+    _selectedReceiverId = null;
+    _selectedReceiverName = null;
+    _selectedReceivers.clear();
   }
 
   /// 刪除任務 - ✅ 修正版本：使用ID刪除並取消背景通知
@@ -2375,6 +2537,16 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: _themeManager.currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.inbox),
+            tooltip: '收件匣',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const InboxPage()),
+              );
+            },
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu),
             onSelected: (value) async {
@@ -3358,6 +3530,91 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                         const SizedBox(height: 8),
+                        // ✅ 收件人選擇
+                        const Text('選擇收件人（可選）',
+                            style: TextStyle(fontSize: 14, color: Colors.grey)),
+                        const SizedBox(height: 8),
+                        _loadingFriends
+                            ? const Center(child: CircularProgressIndicator())
+                            : _friendsList.isEmpty
+                                ? Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('還沒有好友，請先到好友頁面新增好友',
+                                        style: TextStyle(color: Colors.grey)),
+                                  )
+                                : DropdownButtonFormField<String>(
+                                    value: _selectedReceiverId,
+                                    decoration: const InputDecoration(
+                                      labelText: '收件人',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.person),
+                                    ),
+                                    hint: const Text('選擇收件人（不選則為本地提醒）'),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedReceiverId = value;
+                                        if (value == null) {
+                                          _selectedReceiverName = null;
+                                        } else {
+                                          final friend =
+                                              _friendsList.firstWhere(
+                                                  (f) => f['uid'] == value);
+                                          _selectedReceiverName =
+                                              friend['displayName'] ??
+                                                  friend['username'];
+                                        }
+                                      });
+                                    },
+                                    items: [
+                                      const DropdownMenuItem<String>(
+                                        value: null,
+                                        child: Text('不指定（本地提醒）'),
+                                      ),
+                                      ..._friendsList.map(
+                                          (friend) => DropdownMenuItem<String>(
+                                                value: friend['uid'],
+                                                child: Text(
+                                                    '${friend['displayName'] ?? '未知'} @${friend['username'] ?? ''}'),
+                                              )),
+                                    ],
+                                  ),
+                        const SizedBox(height: 8),
+                        // ✅ 收件人多選按鈕
+                        OutlinedButton.icon(
+                          onPressed: _showReceiverSelector,
+                          icon: Icon(
+                            _selectedReceivers.isEmpty
+                                ? Icons.people_outline
+                                : Icons.people,
+                            color: _selectedReceivers.isEmpty
+                                ? Colors.grey
+                                : Colors.purple,
+                          ),
+                          label: Text(
+                            _selectedReceivers.isEmpty
+                                ? '選擇收件人（可複選好友）'
+                                : '已選 ${_selectedReceivers.length} 位：${_selectedReceivers.map((r) => r['displayName']).join('、')}',
+                            style: TextStyle(
+                              color: _selectedReceivers.isEmpty
+                                  ? Colors.grey
+                                  : Colors.purple,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                            side: BorderSide(
+                              color: _selectedReceivers.isEmpty
+                                  ? Colors.grey
+                                  : Colors.purple,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -3534,6 +3791,19 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       debugPrint('❌ 載入分類失敗: $e');
+    }
+  }
+
+  Future<void> _loadFriends() async {
+    setState(() => _loadingFriends = true);
+    try {
+      final friends = await FirebaseService().getFriendList();
+      setState(() {
+        _friendsList = friends;
+        _loadingFriends = false;
+      });
+    } catch (e) {
+      setState(() => _loadingFriends = false);
     }
   }
 

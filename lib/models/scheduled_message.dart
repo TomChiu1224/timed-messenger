@@ -42,6 +42,10 @@ class ScheduledMessage {
   int? categoryId; // 分類ID（可為null）
   List<String> tags; // 標籤列表
 
+  // ✅ 收件人欄位
+  String? receiverId; // 收件人的 Firebase UID
+  String? receiverName; // 收件人的顯示名稱
+
   ScheduledMessage(
     this.message,
     this.time, {
@@ -76,6 +80,8 @@ class ScheduledMessage {
     // ✅ 分類欄位預設值
     this.categoryId,
     this.tags = const [],
+    this.receiverId,
+    this.receiverName,
   });
 
   // ========== ✅ SQLite 序列化方法 - 分類+音效+震動整合版本 ==========
@@ -115,6 +121,8 @@ class ScheduledMessage {
       // ✅ 分類欄位
       'category_id': categoryId,
       'tags': tags.join(','),
+      'receiver_id': receiverId,
+      'receiver_name': receiverName,
     };
 
     // 只有在更新時才包含ID
@@ -185,6 +193,8 @@ class ScheduledMessage {
       // ✅ 分類欄位
       categoryId: map['category_id'],
       tags: parseStringList(map['tags']),
+      receiverId: map['receiver_id'],
+      receiverName: map['receiver_name'],
     );
   }
 
@@ -251,6 +261,8 @@ class ScheduledMessage {
     int? vibrationRepeat,
     int? categoryId,
     List<String>? tags,
+    String? receiverId,
+    String? receiverName,
   }) {
     return ScheduledMessage(
       message ?? this.message,
@@ -282,6 +294,8 @@ class ScheduledMessage {
       vibrationRepeat: vibrationRepeat ?? this.vibrationRepeat,
       categoryId: categoryId ?? this.categoryId,
       tags: tags ?? this.tags,
+      receiverId: receiverId ?? this.receiverId,
+      receiverName: receiverName ?? this.receiverName,
     );
   }
 

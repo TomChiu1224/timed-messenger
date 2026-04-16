@@ -67,7 +67,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
   Future<void> _saveProfile() async {
     if (_usernameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('請輸入用戶名稱'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('請輸入用戶名稱'), backgroundColor: Colors.orange),
       );
       return;
     }
@@ -79,6 +80,18 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       phoneNumber: _phoneController.text.trim(),
       displayName: _displayNameController.text.trim(),
     );
+
+    // ✅ 同步儲存到 Firestore
+    if (success) {
+      final uid = _firebaseService.getUserId();
+      if (uid != null) {
+        await _firebaseService.updateUserProfile(uid, {
+          'username': _usernameController.text.trim(),
+          'phone_number': _phoneController.text.trim(),
+          'displayName': _displayNameController.text.trim(),
+        });
+      }
+    }
 
     setState(() {
       _isLoading = false;
@@ -136,9 +149,12 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
 
   String _getThemeDisplayName(String mode) {
     switch (mode) {
-      case 'light': return '淺色模式';
-      case 'dark': return '深色模式';
-      default: return '跟隨系統';
+      case 'light':
+        return '淺色模式';
+      case 'dark':
+        return '深色模式';
+      default:
+        return '跟隨系統';
     }
   }
 
@@ -186,7 +202,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                             SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: () => setState(() => _isEditingProfile = true),
+                                onPressed: () =>
+                                    setState(() => _isEditingProfile = true),
                                 icon: const Icon(Icons.edit),
                                 label: const Text('編輯個人資料'),
                                 style: ElevatedButton.styleFrom(
@@ -232,7 +249,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: () => setState(() => _isEditingProfile = false),
+                                    onPressed: () => setState(
+                                        () => _isEditingProfile = false),
                                     child: const Text('取消'),
                                   ),
                                 ),
@@ -263,7 +281,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     child: Column(
                       children: [
                         SwitchListTile(
-                          secondary: Icon(Icons.notifications, color: Colors.purple.shade600),
+                          secondary: Icon(Icons.notifications,
+                              color: Colors.purple.shade600),
                           title: const Text('推播通知'),
                           subtitle: const Text('接收排程提醒通知'),
                           value: _notificationEnabled,
@@ -271,7 +290,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                           activeColor: Colors.purple.shade600,
                         ),
                         ListTile(
-                          leading: Icon(Icons.palette, color: Colors.purple.shade600),
+                          leading: Icon(Icons.palette,
+                              color: Colors.purple.shade600),
                           title: const Text('主題模式'),
                           subtitle: Text(_getThemeDisplayName(_themeMode)),
                           trailing: const Icon(Icons.chevron_right),
@@ -290,8 +310,10 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                       child: Column(
                         children: [
                           ListTile(
-                            leading: const Icon(Icons.logout, color: Colors.orange),
-                            title: const Text('登出', style: TextStyle(color: Colors.orange)),
+                            leading:
+                                const Icon(Icons.logout, color: Colors.orange),
+                            title: const Text('登出',
+                                style: TextStyle(color: Colors.orange)),
                             subtitle: const Text('登出當前帳號'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: _showSignOutDialog,
@@ -309,7 +331,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Icon(Icons.info, color: Colors.purple.shade600),
+                          leading:
+                              Icon(Icons.info, color: Colors.purple.shade600),
                           title: const Text('應用程式版本'),
                           subtitle: const Text('1.4.0'),
                           onTap: () {},
@@ -349,21 +372,25 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     _userProfile!.displayName.isNotEmpty
                         ? _userProfile!.displayName
                         : '未設定姓名',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
                   Text(_userProfile!.email,
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+                      style:
+                          TextStyle(fontSize: 14, color: Colors.grey.shade600)),
                   if (_username.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text('@$_username',
-                        style: TextStyle(fontSize: 13, color: Colors.purple.shade400)),
+                        style: TextStyle(
+                            fontSize: 13, color: Colors.purple.shade400)),
                   ],
                   if (_userProfile!.lastLoginAt != null) ...[
                     const SizedBox(height: 4),
                     Text(
                       '上次登入：${_formatDateTime(_userProfile!.lastLoginAt!)}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                      style:
+                          TextStyle(fontSize: 12, color: Colors.grey.shade500),
                     ),
                   ],
                 ],
@@ -380,7 +407,9 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(title,
           style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.bold, color: Colors.purple.shade700)),
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.purple.shade700)),
     );
   }
 
@@ -394,8 +423,11 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              Text(label,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w500)),
             ],
           ),
         ],

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'models/task_category.dart';
-import 'models/scheduled_message.dart'; // ✅ 新增ScheduledMessage引用
+import 'models/scheduled_message.dart';
 
 /// ✅ SQLite 資料庫助手類別 - 支援分類功能的完整版
 class DatabaseHelper {
@@ -12,27 +12,23 @@ class DatabaseHelper {
 
   static Database? _database;
 
-  /// 取得資料庫實例
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
-  /// 初始化資料庫
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'scheduled_messages.db');
     return await openDatabase(
       path,
-      version: 5, // ✅ 版本號更新為5（加入分類支援）
+      version: 6, // ✅ 版本號更新為6（加入收件人支援）
       onCreate: _createDb,
       onUpgrade: _onUpgrade,
     );
   }
 
-  /// 建立資料表（最新版本，包含分類支援）
   Future<void> _createDb(Database db, int version) async {
-    // ✅ 建立排程訊息表（包含分類欄位）
     await db.execute('''
       CREATE TABLE scheduled_messages (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,30 +49,23 @@ class DatabaseHelper {
         end_date INTEGER,
         target_timezone TEXT DEFAULT 'Asia/Taipei',
         target_timezone_name TEXT DEFAULT '台灣時間',
-        
-        -- 音效相關欄位
         sound_enabled INTEGER DEFAULT 1,
         sound_type TEXT DEFAULT 'system',
         sound_path TEXT DEFAULT 'notification',
         sound_volume REAL DEFAULT 0.8,
         sound_repeat INTEGER DEFAULT 1,
-        
-        -- 震動相關欄位
         vibration_enabled INTEGER DEFAULT 1,
         vibration_pattern TEXT DEFAULT 'short',
         vibration_intensity REAL DEFAULT 0.8,
         vibration_repeat INTEGER DEFAULT 1,
-        
-        -- ✅ 新增分類相關欄位
         category_id INTEGER,
         tags TEXT DEFAULT '',
-        
-        -- ✅ 新增外鍵約束
+        receiver_id TEXT,
+        receiver_name TEXT,
         FOREIGN KEY (category_id) REFERENCES task_categories (id) ON DELETE SET NULL
       )
     ''');
 
-    // ✅ 建立分類表
     await db.execute('''
       CREATE TABLE task_categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,45 +79,48 @@ class DatabaseHelper {
       )
     ''');
 
-    // ✅ 插入預設分類
     await _insertDefaultCategories(db);
-
-    print('✅ 資料庫建立完成（含分類支援）');
+    print('✅ 資料庫建立完成（含收件人支援）');
   }
 
-  /// ✅ 資料庫升級處理（支援分類功能）
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     print('🔄 資料庫升級：從版本 $oldVersion 到 $newVersion');
 
-    // 版本1到2：時區支援
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN target_timezone TEXT DEFAULT "Asia/Taipei"');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN target_timezone_name TEXT DEFAULT "台灣時間"');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN target_timezone TEXT DEFAULT "Asia/Taipei"');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN target_timezone_name TEXT DEFAULT "台灣時間"');
       print('✅ 升級至版本2：新增時區支援');
     }
 
-    // 版本2到3：音效支援
     if (oldVersion < 3) {
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN sound_enabled INTEGER DEFAULT 1');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN sound_type TEXT DEFAULT "system"');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN sound_path TEXT DEFAULT "notification"');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN sound_volume REAL DEFAULT 0.8');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN sound_repeat INTEGER DEFAULT 1');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN sound_enabled INTEGER DEFAULT 1');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN sound_type TEXT DEFAULT "system"');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN sound_path TEXT DEFAULT "notification"');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN sound_volume REAL DEFAULT 0.8');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN sound_repeat INTEGER DEFAULT 1');
       print('✅ 升級至版本3：新增音效支援');
     }
 
-    // 版本3到4：震動支援
     if (oldVersion < 4) {
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN vibration_enabled INTEGER DEFAULT 1');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN vibration_pattern TEXT DEFAULT "short"');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN vibration_intensity REAL DEFAULT 0.8');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN vibration_repeat INTEGER DEFAULT 1');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN vibration_enabled INTEGER DEFAULT 1');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN vibration_pattern TEXT DEFAULT "short"');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN vibration_intensity REAL DEFAULT 0.8');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN vibration_repeat INTEGER DEFAULT 1');
       print('✅ 升級至版本4：新增震動支援');
     }
 
-    // ✅ 版本4到5：分類支援
     if (oldVersion < 5) {
-      // 建立分類表
       await db.execute('''
         CREATE TABLE IF NOT EXISTS task_categories (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,22 +133,26 @@ class DatabaseHelper {
           is_default INTEGER DEFAULT 0
         )
       ''');
-
-      // 新增分類相關欄位到排程表
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN category_id INTEGER');
-      await db.execute('ALTER TABLE scheduled_messages ADD COLUMN tags TEXT DEFAULT ""');
-
-      // 插入預設分類
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN category_id INTEGER');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN tags TEXT DEFAULT ""');
       await _insertDefaultCategories(db);
-
       print('✅ 升級至版本5：新增分類支援');
+    }
+
+    // ✅ 版本5到6：收件人支援
+    if (oldVersion < 6) {
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN receiver_id TEXT');
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN receiver_name TEXT');
+      print('✅ 升級至版本6：新增收件人支援');
     }
   }
 
-  /// ✅ 插入預設分類
   Future<void> _insertDefaultCategories(Database db) async {
     final defaultCategories = DefaultCategories.all;
-
     for (var category in defaultCategories) {
       try {
         await db.insert('task_categories', category.toMap());
@@ -167,21 +163,16 @@ class DatabaseHelper {
     print('✅ 預設分類插入完成');
   }
 
-  // ========== 原有的排程訊息方法 ==========
-
-  /// 新增排程訊息
   Future<int> insertMessage(Map<String, dynamic> message) async {
     final db = await database;
     return await db.insert('scheduled_messages', message);
   }
 
-  /// 取得所有排程訊息
   Future<List<Map<String, dynamic>>> getAllMessages() async {
     final db = await database;
     return await db.query('scheduled_messages', orderBy: 'time ASC');
   }
 
-  /// 更新排程訊息
   Future<int> updateMessage(int id, Map<String, dynamic> message) async {
     final db = await database;
     return await db.update(
@@ -192,7 +183,6 @@ class DatabaseHelper {
     );
   }
 
-  /// 刪除排程訊息
   Future<int> deleteMessage(int id) async {
     final db = await database;
     return await db.delete(
@@ -202,15 +192,11 @@ class DatabaseHelper {
     );
   }
 
-  /// 刪除所有排程訊息
   Future<int> deleteAllMessages() async {
     final db = await database;
     return await db.delete('scheduled_messages');
   }
 
-  // ========== ✅ 新增分類相關方法 ==========
-
-  /// 取得所有分類
   Future<List<TaskCategory>> getAllCategories() async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -220,13 +206,11 @@ class DatabaseHelper {
     return maps.map((map) => TaskCategory.fromMap(map)).toList();
   }
 
-  /// 新增分類
   Future<int> insertCategory(TaskCategory category) async {
     final db = await database;
     return await db.insert('task_categories', category.toMap());
   }
 
-  /// 更新分類
   Future<int> updateCategory(int id, TaskCategory category) async {
     final db = await database;
     return await db.update(
@@ -237,19 +221,14 @@ class DatabaseHelper {
     );
   }
 
-  /// 刪除分類
   Future<int> deleteCategory(int id) async {
     final db = await database;
-
-    // 先將使用此分類的排程設為無分類
     await db.update(
       'scheduled_messages',
       {'category_id': null},
       where: 'category_id = ?',
       whereArgs: [id],
     );
-
-    // 再刪除分類
     return await db.delete(
       'task_categories',
       where: 'id = ?',
@@ -257,7 +236,6 @@ class DatabaseHelper {
     );
   }
 
-  /// 根據分類ID取得排程（回傳ScheduledMessage物件列表）
   Future<List<ScheduledMessage>> getMessagesByCategory(int categoryId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -269,42 +247,31 @@ class DatabaseHelper {
     return maps.map((map) => ScheduledMessage.fromMap(map)).toList();
   }
 
-  /// 取得分類使用統計
   Future<Map<String, dynamic>> getCategoryUsageStats(int categoryId) async {
     final db = await database;
-
-    // 總任務數
     final totalResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE category_id = ?',
       [categoryId],
     );
     final totalTasks = totalResult.first['count'] as int;
-
-    // 已完成任務數
     final completedResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE category_id = ? AND sent = 1',
       [categoryId],
     );
     final completedTasks = completedResult.first['count'] as int;
-
-    // 進行中任務數
     final now = DateTime.now().millisecondsSinceEpoch;
     final activeResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE category_id = ? AND sent = 0 AND time > ?',
       [categoryId, now],
     );
     final activeTasks = activeResult.first['count'] as int;
-
-    // 重複任務數
     final repeatingResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE category_id = ? AND repeat_type != ?',
       [categoryId, 'none'],
     );
     final repeatingTasks = repeatingResult.first['count'] as int;
-
-    // 計算完成率
-    final completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
-
+    final completionRate =
+        totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
     return {
       'total_tasks': totalTasks,
       'completed_tasks': completedTasks,
@@ -314,58 +281,44 @@ class DatabaseHelper {
     };
   }
 
-  /// 取得所有使用的標籤
   Future<List<String>> getAllTags() async {
     final db = await database;
     final result = await db.rawQuery(
-        'SELECT DISTINCT tags FROM scheduled_messages WHERE tags IS NOT NULL AND tags != ""'
-    );
-
+        'SELECT DISTINCT tags FROM scheduled_messages WHERE tags IS NOT NULL AND tags != ""');
     Set<String> allTags = {};
     for (var row in result) {
       final tagsString = row['tags'] as String?;
       if (tagsString != null && tagsString.isNotEmpty) {
-        final tags = tagsString.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty);
+        final tags = tagsString
+            .split(',')
+            .map((tag) => tag.trim())
+            .where((tag) => tag.isNotEmpty);
         allTags.addAll(tags);
       }
     }
-
     return allTags.toList()..sort();
   }
 
-  // ========== ✅ 修正後的統計相關方法 ==========
-
-  /// 取得整體統計資料（修正欄位名稱）
   Future<Map<String, dynamic>> getOverallStats() async {
     final db = await database;
-
-    // 總任務數
-    final totalResult = await db.rawQuery('SELECT COUNT(*) as count FROM scheduled_messages');
+    final totalResult =
+        await db.rawQuery('SELECT COUNT(*) as count FROM scheduled_messages');
     final totalTasks = totalResult.first['count'] as int;
-
-    // 已完成任務數
-    final completedResult = await db.rawQuery('SELECT COUNT(*) as count FROM scheduled_messages WHERE sent = 1');
+    final completedResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM scheduled_messages WHERE sent = 1');
     final completedTasks = completedResult.first['count'] as int;
-
-    // 進行中任務數
     final pendingTasks = totalTasks - completedTasks;
-
-    // 完成率
-    final completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
-
-    // 重複任務數
-    final repeatResult = await db.rawQuery('SELECT COUNT(*) as count FROM scheduled_messages WHERE repeat_type != "none"');
+    final completionRate =
+        totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
+    final repeatResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM scheduled_messages WHERE repeat_type != "none"');
     final repeatTasks = repeatResult.first['count'] as int;
-
-    // ✅ 時區統計
     final timezoneResult = await db.rawQuery('''
       SELECT target_timezone, target_timezone_name, COUNT(*) as count 
       FROM scheduled_messages 
       GROUP BY target_timezone, target_timezone_name 
       ORDER BY count DESC
     ''');
-
-    // ✅ 修正欄位名稱以匹配統計頁面期望
     return {
       'total_messages': totalTasks,
       'sent_messages': completedTasks,
@@ -376,35 +329,26 @@ class DatabaseHelper {
     };
   }
 
-  /// 取得指定日期範圍的統計資料（修正欄位名稱）
-  Future<Map<String, dynamic>> getStatsInDateRange(DateTime startDate, DateTime endDate) async {
+  Future<Map<String, dynamic>> getStatsInDateRange(
+      DateTime startDate, DateTime endDate) async {
     final db = await database;
-
     final startMs = startDate.millisecondsSinceEpoch;
     final endMs = endDate.millisecondsSinceEpoch;
-
-    // 該期間的總任務數
     final totalResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE time >= ? AND time <= ?',
       [startMs, endMs],
     );
     final totalTasks = totalResult.first['count'] as int;
-
-    // 該期間已完成的任務數
     final completedResult = await db.rawQuery(
       'SELECT COUNT(*) as count FROM scheduled_messages WHERE time >= ? AND time <= ? AND sent = 1',
       [startMs, endMs],
     );
     final completedTasks = completedResult.first['count'] as int;
-
-    // 該期間使用的分類數
     final categoriesResult = await db.rawQuery(
       'SELECT COUNT(DISTINCT category_id) as count FROM scheduled_messages WHERE time >= ? AND time <= ? AND category_id IS NOT NULL',
       [startMs, endMs],
     );
     final categoriesUsed = categoriesResult.first['count'] as int;
-
-    // ✅ 修正欄位名稱以匹配統計頁面期望
     return {
       'total': totalTasks,
       'completed': completedTasks,
@@ -412,30 +356,23 @@ class DatabaseHelper {
     };
   }
 
-  /// 取得每日統計資料（最近30天）
   Future<List<Map<String, dynamic>>> getDailyStats({int days = 30}) async {
     final now = DateTime.now();
     final startDate = now.subtract(Duration(days: days));
-
     List<Map<String, dynamic>> dailyStats = [];
-
     for (int i = 0; i < days; i++) {
       final date = startDate.add(Duration(days: i));
       final dayStart = DateTime(date.year, date.month, date.day);
       final dayEnd = DateTime(date.year, date.month, date.day, 23, 59, 59);
-
       final stats = await getStatsInDateRange(dayStart, dayEnd);
       stats['date'] = dayStart.toIso8601String();
       dailyStats.add(stats);
     }
-
     return dailyStats;
   }
 
-  /// 取得分類統計資料
   Future<List<Map<String, dynamic>>> getCategoryStats() async {
     final db = await database;
-
     final result = await db.rawQuery('''
       SELECT 
         tc.id,
@@ -449,12 +386,11 @@ class DatabaseHelper {
       GROUP BY tc.id, tc.name, tc.color_value, tc.icon_data
       ORDER BY total_tasks DESC
     ''');
-
     return result.map((row) {
       final totalTasks = row['total_tasks'] as int;
       final completedTasks = row['completed_tasks'] as int;
-      final completionRate = totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
-
+      final completionRate =
+          totalTasks > 0 ? ((completedTasks / totalTasks) * 100).round() : 0;
       return {
         'category_id': row['id'],
         'category_name': row['name'],
@@ -467,10 +403,8 @@ class DatabaseHelper {
     }).toList();
   }
 
-  // ========== 原有的其他方法保持不變 ==========
-
-  /// 根據時區查詢訊息
-  Future<List<Map<String, dynamic>>> getMessagesByTimeZone(String timeZone) async {
+  Future<List<Map<String, dynamic>>> getMessagesByTimeZone(
+      String timeZone) async {
     final db = await database;
     return await db.query(
       'scheduled_messages',
@@ -480,88 +414,79 @@ class DatabaseHelper {
     );
   }
 
-  /// 取得使用中的時區列表
   Future<List<String>> getUsedTimeZones() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery(
-        'SELECT DISTINCT target_timezone, target_timezone_name FROM scheduled_messages ORDER BY target_timezone_name'
-    );
-    return result.map((row) => '${row['target_timezone_name']} (${row['target_timezone']})').toList();
+        'SELECT DISTINCT target_timezone, target_timezone_name FROM scheduled_messages ORDER BY target_timezone_name');
+    return result
+        .map((row) =>
+            '${row['target_timezone_name']} (${row['target_timezone']})')
+        .toList();
   }
 
-  /// 更新排程的音效設定
-  Future<int> updateMessageSoundSettings(int id, Map<String, dynamic> soundSettings) async {
+  Future<int> updateMessageSoundSettings(
+      int id, Map<String, dynamic> soundSettings) async {
     final db = await database;
-    return await db.update(
-      'scheduled_messages',
-      soundSettings,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.update('scheduled_messages', soundSettings,
+        where: 'id = ?', whereArgs: [id]);
   }
 
-  /// 取得排程的音效設定
   Future<Map<String, dynamic>?> getMessageSoundSettings(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'scheduled_messages',
-      columns: ['sound_enabled', 'sound_type', 'sound_path', 'sound_volume', 'sound_repeat'],
+      columns: [
+        'sound_enabled',
+        'sound_type',
+        'sound_path',
+        'sound_volume',
+        'sound_repeat'
+      ],
       where: 'id = ?',
       whereArgs: [id],
     );
-
-    if (maps.isNotEmpty) {
-      return maps.first;
-    }
+    if (maps.isNotEmpty) return maps.first;
     return null;
   }
 
-  /// 更新排程的震動設定
-  Future<int> updateMessageVibrationSettings(int id, Map<String, dynamic> vibrationSettings) async {
+  Future<int> updateMessageVibrationSettings(
+      int id, Map<String, dynamic> vibrationSettings) async {
     final db = await database;
-    return await db.update(
-      'scheduled_messages',
-      vibrationSettings,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    return await db.update('scheduled_messages', vibrationSettings,
+        where: 'id = ?', whereArgs: [id]);
   }
 
-  /// 取得排程的震動設定
   Future<Map<String, dynamic>?> getMessageVibrationSettings(int id) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       'scheduled_messages',
-      columns: ['vibration_enabled', 'vibration_pattern', 'vibration_intensity', 'vibration_repeat'],
+      columns: [
+        'vibration_enabled',
+        'vibration_pattern',
+        'vibration_intensity',
+        'vibration_repeat'
+      ],
       where: 'id = ?',
       whereArgs: [id],
     );
-
-    if (maps.isNotEmpty) {
-      return maps.first;
-    }
+    if (maps.isNotEmpty) return maps.first;
     return null;
   }
 
-  /// 取得啟用音效的排程數量
   Future<int> getEnabledSoundMessagesCount() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM scheduled_messages WHERE sound_enabled = 1'
-    );
+        'SELECT COUNT(*) as count FROM scheduled_messages WHERE sound_enabled = 1');
     return result.first['count'] as int;
   }
 
-  /// 取得啟用震動的排程數量
   Future<int> getEnabledVibrationMessagesCount() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM scheduled_messages WHERE vibration_enabled = 1'
-    );
+        'SELECT COUNT(*) as count FROM scheduled_messages WHERE vibration_enabled = 1');
     return result.first['count'] as int;
   }
 
-  /// 取得最常使用的音效
   Future<String> getMostUsedSound() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery('''
@@ -572,14 +497,10 @@ class DatabaseHelper {
       ORDER BY usage_count DESC 
       LIMIT 1
     ''');
-
-    if (result.isNotEmpty) {
-      return result.first['sound_path'] as String;
-    }
+    if (result.isNotEmpty) return result.first['sound_path'] as String;
     return 'notification';
   }
 
-  /// 取得最常使用的震動模式
   Future<String> getMostUsedVibrationPattern() async {
     final db = await database;
     final List<Map<String, dynamic>> result = await db.rawQuery('''
@@ -590,14 +511,10 @@ class DatabaseHelper {
       ORDER BY usage_count DESC 
       LIMIT 1
     ''');
-
-    if (result.isNotEmpty) {
-      return result.first['vibration_pattern'] as String;
-    }
+    if (result.isNotEmpty) return result.first['vibration_pattern'] as String;
     return 'short';
   }
 
-  /// 關閉資料庫
   Future<void> close() async {
     final db = await database;
     await db.close();

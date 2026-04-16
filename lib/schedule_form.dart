@@ -4,9 +4,7 @@ import 'models/task_category.dart';
 import 'models/scheduled_message.dart';
 import 'services/theme_manager.dart';
 import 'app_timezones.dart';
-
-/// 將 main.dart 中 schedule_form 相關的表單UI、狀態、驗證、重設、資料建立等邏輯全部搬移到這裡
-/// 提供一個 ScheduleFormWidget，並以 callback 方式回傳新增的 ScheduledMessage
+import 'firebase_service.dart';
 
 class ScheduleFormWidget extends StatefulWidget {
   final ThemeManager themeManager;
@@ -27,7 +25,26 @@ class ScheduleFormWidget extends StatefulWidget {
 }
 
 class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
-  // ========== schedule_form 相關方法 ==========
+  @override
+  void initState() {
+    super.initState();
+    _loadFriends();
+  }
+
+  Future<void> _loadFriends() async {
+    setState(() => _loadingFriends = true);
+    try {
+      final FirebaseService firebaseService = FirebaseService();
+      final friends = await firebaseService.getFriendList();
+      setState(() {
+        _friendsList = friends;
+        _loadingFriends = false;
+      });
+    } catch (e) {
+      setState(() => _loadingFriends = false);
+    }
+  }
+
   void _resetForm() {
     _messageController.clear();
     _selectedDateTime = null;
@@ -50,6 +67,8 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
     _soundRepeat = 1;
     _selectedCategoryId = null;
     _selectedTags.clear();
+    _selectedReceiverId = null;
+    _selectedReceiverName = null;
     setState(() {});
   }
 
@@ -79,8 +98,7 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
     }
   }
 
-  // ...可繼續搬移 _addMessage、衝突檢查等 schedule_form 相關方法...
-  // ====== schedule_form 相關狀態變數 ======
+  // ====== 狀態變數 ======
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -104,9 +122,14 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
   int? _selectedCategoryId;
   final List<String> _selectedTags = [];
 
+  // ✅ 收件人相關
+  String? _selectedReceiverId;
+  String? _selectedReceiverName;
+  List<Map<String, dynamic>> _friendsList = [];
+  bool _loadingFriends = false;
+
   @override
   Widget build(BuildContext context) {
-    // ...existing UI code...
     // ========== 重複模式選擇 ==========
     const repeatTypes = [
       {'value': 'none', 'label': '不重複'},
@@ -286,6 +309,62 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
         ),
       );
     }
+
+    // ========== 收件人選擇 ==========
+    Widget receiverSelector = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('選擇收件人（可選）',
+            style: TextStyle(fontSize: 14, color: Colors.grey)),
+        const SizedBox(height: 8),
+        _loadingFriends
+            ? const Center(child: CircularProgressIndicator())
+            : _friendsList.isEmpty
+                ? Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('還沒有好友，請先到好友頁面新增好友',
+                        style: TextStyle(color: Colors.grey)),
+                  )
+                : DropdownButtonFormField<String>(
+                    value: _selectedReceiverId,
+                    decoration: const InputDecoration(
+                      labelText: '收件人',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    hint: const Text('選擇收件人（不選則為本地提醒）'),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedReceiverId = value;
+                        if (value == null) {
+                          _selectedReceiverName = null;
+                        } else {
+                          final friend =
+                              _friendsList.firstWhere((f) => f['uid'] == value);
+                          _selectedReceiverName =
+                              friend['displayName'] ?? friend['username'];
+                        }
+                      });
+                    },
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('不指定（本地提醒）'),
+                      ),
+                      ..._friendsList.map((friend) => DropdownMenuItem<String>(
+                            value: friend['uid'],
+                            child: Text(
+                                '${friend['displayName'] ?? '未知'} @${friend['username'] ?? ''}'),
+                          )),
+                    ],
+                  ),
+      ],
+    );
+
     // ========== 送出按鈕與驗證 ==========
     Widget submitButton = SizedBox(
       width: double.infinity,
@@ -298,7 +377,6 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
           padding: const EdgeInsets.symmetric(vertical: 12),
         ),
         onPressed: () {
-          // 驗證
           if (_messageController.text.trim().isEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text('請輸入任務內容'), backgroundColor: Colors.orange));
@@ -309,8 +387,6 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
                 content: Text('請設定觸發提醒時間'), backgroundColor: Colors.orange));
             return;
           }
-          // 其他 schedule_form 驗證可依需求補充
-          // 建立 ScheduledMessage 並回傳
           final newMsg = ScheduledMessage(
             _messageController.text.trim(),
             _selectedDateTime!,
@@ -335,6 +411,8 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
             soundRepeat: _soundRepeat,
             categoryId: _selectedCategoryId,
             tags: List.from(_selectedTags),
+            receiverId: _selectedReceiverId,
+            receiverName: _selectedReceiverName,
           );
           widget.onAdd(newMsg);
           _resetForm();
@@ -446,11 +524,10 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
                 ],
               ),
               const SizedBox(height: 16),
-              // 音效設定區域 ...（略，與前段相同）...
-              // 震動設定區域 ...（略，與前段相同）...
-              const SizedBox(height: 16),
               repeatTypeDropdown,
               ...repeatConditionWidgets,
+              const SizedBox(height: 16),
+              receiverSelector,
               const SizedBox(height: 16),
               submitButton,
             ],

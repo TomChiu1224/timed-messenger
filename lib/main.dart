@@ -50,6 +50,7 @@ import 'import_export_page.dart';
 import 'services/theme_manager.dart';
 import 'subscription_page.dart'; // ✅ 訂閱頁面
 import 'services/subscription_service.dart'; // ✅ 訂閱服務
+import 'inbox_page.dart'; // ✅ 收件匣頁面
 
 // 初始化通知插件
 // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -237,6 +238,10 @@ class _HomePageState extends State<HomePage> {
 
   final DatabaseHelper _databaseHelper = DatabaseHelper();
 
+  // ✅ 收件匣未讀數量
+  int _unreadCount = 0;
+  StreamSubscription<int>? _unreadSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -245,6 +250,16 @@ class _HomePageState extends State<HomePage> {
     // ✅ 載入資料庫中的排程訊息
     _loadMessagesFromDatabase();
     _loadCategories();
+
+    // ✅ 監聽未讀訊息數量（僅限移動平台）
+    if (Platform.isAndroid || Platform.isIOS) {
+      _loadUnreadCount();
+      _unreadSubscription = MessagingService.watchUnreadCount().listen((count) {
+        if (mounted) {
+          setState(() => _unreadCount = count);
+        }
+      });
+    }
 
     // ✅ 背景通知權限引導（首次啟動時）
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -460,6 +475,14 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  @override
+  void dispose() {
+    // ✅ 取消未讀數量監聽
+    _unreadSubscription?.cancel();
+    _messageController.dispose();
+    super.dispose();
+  }
+
   // ✅ 從資料庫載入訊息的方法（加入過期任務處理）
 // ✅ 從資料庫載入訊息的方法（徹底處理過期任務）
   Future<void> _loadMessagesFromDatabase() async {
@@ -512,6 +535,18 @@ class _HomePageState extends State<HomePage> {
       debugPrint('✅ 從資料庫載入了 ${_scheduledMessages.length} 個排程訊息，已處理過期任務');
     } catch (e) {
       debugPrint('❌ 載入資料庫失敗: $e');
+    }
+  }
+
+  // ✅ 載入未讀訊息數量
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await MessagingService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadCount = count);
+      }
+    } catch (e) {
+      debugPrint('❌ 載入未讀數量失敗: $e');
     }
   }
 
@@ -2344,6 +2379,47 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: _themeManager.currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
+          // ✅ 收件匣按鈕（帶未讀 Badge）
+          if (Platform.isAndroid || Platform.isIOS)
+            Stack(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.inbox),
+                  tooltip: '收件匣',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const InboxPage()),
+                    ).then((_) => _loadUnreadCount());
+                  },
+                ),
+                if (_unreadCount > 0)
+                  Positioned(
+                    right: 6,
+                    top: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu),
             onSelected: (value) async {

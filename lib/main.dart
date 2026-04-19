@@ -3625,67 +3625,7 @@ class _HomePageState extends State<HomePage> {
                           ], // 進階設定結束
                         ],
                         const SizedBox(height: 8),
-                        // ✅ 收件人選擇
-                        const Text('選擇收件人（可選）',
-                            style: TextStyle(fontSize: 14, color: Colors.grey)),
-                        const SizedBox(height: 8),
-                        _loadingFriends
-                            ? const Center(child: CircularProgressIndicator())
-                            : _friendsList.isEmpty
-                                ? Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                          color: Colors.grey.shade300),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text('還沒有好友，請先到好友頁面新增好友',
-                                        style: TextStyle(color: Colors.grey)),
-                                  )
-                                : DropdownButtonFormField<String>(
-                                    isExpanded: true,
-                                    value: _selectedReceiverId,
-                                    decoration: const InputDecoration(
-                                      labelText: '收件人',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.person),
-                                    ),
-                                    hint: const Text('選擇收件人（不選則為本地提醒）'),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _selectedReceiverId = value;
-                                        if (value == null) {
-                                          _selectedReceiverName = null;
-                                        } else {
-                                          final friend =
-                                              _friendsList.firstWhere(
-                                                  (f) => f['uid'] == value);
-                                          _selectedReceiverName =
-                                              friend['displayName'] ??
-                                                  friend['username'];
-                                        }
-                                      });
-                                    },
-                                    items: [
-                                      const DropdownMenuItem<String>(
-                                        value: null,
-                                        child: Text('不指定（本地提醒）'),
-                                      ),
-                                      ..._friendsList
-                                          .map(
-                                            (friend) =>
-                                                DropdownMenuItem<String>(
-                                                    value: friend['uid'],
-                                                    child: Text(
-                                                      '${friend['displayName'] ?? '未知'} @${friend['username'] ?? ''}',
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    )),
-                                          )
-                                          .toList(),
-                                    ],
-                                  ),
-                        const SizedBox(height: 8),
+
                         // ✅ 收件人多選按鈕
                         OutlinedButton.icon(
                           onPressed: _showReceiverSelector,

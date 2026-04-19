@@ -195,6 +195,7 @@ class _HomePageState extends State<HomePage> {
   // ✅ 群發收件人
   final FirebaseService _firebaseService = FirebaseService();
   List<Map<String, dynamic>> _selectedReceivers = [];
+  int _unreadCount = 0;
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -257,6 +258,12 @@ class _HomePageState extends State<HomePage> {
 
     // ✅ 載入資料庫中的排程訊息
     _loadMessagesFromDatabase();
+    _loadUnreadCount();
+
+    // ✅ 每30秒自動更新未讀數量
+    Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) _loadUnreadCount();
+    });
     _loadCategories();
     _loadFriends();
 
@@ -1137,6 +1144,25 @@ class _HomePageState extends State<HomePage> {
 // ========== 愛傳時APP - 第4段：新增任務方法、編輯任務對話框（整合音效功能）==========
 
   /// ✅ 改善版新增任務方法 - 加入驗證和衝突檢查 + 時區支援 + 音效設定
+  /// ✅ 載入未讀訊息數量
+  Future<void> _loadUnreadCount() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final snapshot = await FirebaseFirestore.instance
+          .collection('scheduled_messages')
+          .where('receiverId', isEqualTo: user.uid)
+          .where('status', isEqualTo: 'triggered')
+          .get();
+      if (mounted) {
+        setState(() {
+          _unreadCount = snapshot.docs.length;
+        });
+      }
+    } catch (e) {
+      print('❌ 載入未讀數量失敗: $e');
+    }
+  }
 
   /// ✅ 開啟好友多選對話框
   Future<void> _showReceiverSelector() async {
@@ -2537,15 +2563,48 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: _themeManager.currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.inbox),
-            tooltip: '收件匣',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const InboxPage()),
-              );
-            },
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.inbox),
+                tooltip: '收件匣',
+                onPressed: () async {
+                  setState(() {
+                    _unreadCount = 0;
+                  });
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const InboxPage()),
+                  );
+                  _loadUnreadCount();
+                },
+              ),
+              if (_unreadCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _unreadCount > 99 ? '99+' : '$_unreadCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.menu),
@@ -3548,6 +3607,7 @@ class _HomePageState extends State<HomePage> {
                                         style: TextStyle(color: Colors.grey)),
                                   )
                                 : DropdownButtonFormField<String>(
+                                    isExpanded: true,
                                     value: _selectedReceiverId,
                                     decoration: const InputDecoration(
                                       labelText: '收件人',
@@ -3575,12 +3635,18 @@ class _HomePageState extends State<HomePage> {
                                         value: null,
                                         child: Text('不指定（本地提醒）'),
                                       ),
-                                      ..._friendsList.map(
-                                          (friend) => DropdownMenuItem<String>(
-                                                value: friend['uid'],
-                                                child: Text(
-                                                    '${friend['displayName'] ?? '未知'} @${friend['username'] ?? ''}'),
-                                              )),
+                                      ..._friendsList
+                                          .map(
+                                            (friend) =>
+                                                DropdownMenuItem<String>(
+                                                    value: friend['uid'],
+                                                    child: Text(
+                                                      '${friend['displayName'] ?? '未知'} @${friend['username'] ?? ''}',
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    )),
+                                          )
+                                          .toList(),
                                     ],
                                   ),
                         const SizedBox(height: 8),
@@ -3595,14 +3661,17 @@ class _HomePageState extends State<HomePage> {
                                 ? Colors.grey
                                 : Colors.purple,
                           ),
-                          label: Text(
-                            _selectedReceivers.isEmpty
-                                ? '選擇收件人（可複選好友）'
-                                : '已選 ${_selectedReceivers.length} 位：${_selectedReceivers.map((r) => r['displayName']).join('、')}',
-                            style: TextStyle(
-                              color: _selectedReceivers.isEmpty
-                                  ? Colors.grey
-                                  : Colors.purple,
+                          label: Flexible(
+                            child: Text(
+                              _selectedReceivers.isEmpty
+                                  ? '選擇收件人（可複選好友）'
+                                  : '已選 ${_selectedReceivers.length} 位：${_selectedReceivers.map((r) => r['displayName']).join('、')}',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: _selectedReceivers.isEmpty
+                                    ? Colors.grey
+                                    : Colors.purple,
+                              ),
                             ),
                           ),
                           style: OutlinedButton.styleFrom(

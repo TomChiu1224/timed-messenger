@@ -196,6 +196,7 @@ class _HomePageState extends State<HomePage> {
   final FirebaseService _firebaseService = FirebaseService();
   List<Map<String, dynamic>> _selectedReceivers = [];
   int _unreadCount = 0;
+  bool _showAdvancedSettings = false;
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -2795,798 +2796,833 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
 
-                        // ✅ 時區選擇器
-                        DropdownButtonFormField<String>(
-                          value: _selectedTimeZone,
-                          decoration: const InputDecoration(
-                            labelText: '選擇時區',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.public),
-                          ),
-                          onChanged: (String? newValue) {
-                            if (newValue != null) {
-                              final timeZoneInfo =
-                                  AppTimeZones.getTimeZoneById(newValue);
-                              if (timeZoneInfo != null) {
-                                setState(() {
-                                  _selectedTimeZone = newValue;
-                                  _selectedTimeZoneName =
-                                      timeZoneInfo.displayName;
-                                });
-                              }
-                            }
+                        // ✅ 進階設定展開按鈕
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _showAdvancedSettings = !_showAdvancedSettings;
+                            });
                           },
-                          items: AppTimeZones.supportedZones
-                              .map<DropdownMenuItem<String>>(
-                                  (SimpleTimeZone zone) {
-                            return DropdownMenuItem<String>(
-                              value: zone.id,
-                              child: Text(zone.displayName),
-                            );
-                          }).toList(),
+                          icon: Icon(_showAdvancedSettings
+                              ? Icons.expand_less
+                              : Icons.expand_more),
+                          label: Text(_showAdvancedSettings
+                              ? '收起進階設定'
+                              : '⚙️ 進階設定（時區、音效、震動、重複）'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
                         ),
                         const SizedBox(height: 8),
-
-                        // ✅ 時間預覽（如果有選擇時間）
-                        if (_selectedDateTime != null &&
-                            _selectedTimeZone != 'Asia/Taipei')
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
+                        if (_showAdvancedSettings) ...[
+                          // ✅ 時區選擇器
+                          DropdownButtonFormField<String>(
+                            value: _selectedTimeZone,
+                            decoration: const InputDecoration(
+                              labelText: '選擇時區',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.public),
                             ),
-                            child: Row(
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                final timeZoneInfo =
+                                    AppTimeZones.getTimeZoneById(newValue);
+                                if (timeZoneInfo != null) {
+                                  setState(() {
+                                    _selectedTimeZone = newValue;
+                                    _selectedTimeZoneName =
+                                        timeZoneInfo.displayName;
+                                  });
+                                }
+                              }
+                            },
+                            items: AppTimeZones.supportedZones
+                                .map<DropdownMenuItem<String>>(
+                                    (SimpleTimeZone zone) {
+                              return DropdownMenuItem<String>(
+                                value: zone.id,
+                                child: Text(zone.displayName),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 8),
+
+                          // ✅ 時間預覽（如果有選擇時間）
+                          if (_selectedDateTime != null &&
+                              _selectedTimeZone != 'Asia/Taipei')
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue.shade200),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.preview,
+                                      size: 16, color: Colors.blue),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '時區預覽：${_formatScheduleTime(ScheduledMessage("", _selectedDateTime!, targetTimeZone: _selectedTimeZone, targetTimeZoneName: _selectedTimeZoneName))}',
+                                      style: const TextStyle(
+                                          fontSize: 14, color: Colors.blue),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_selectedDateTime != null &&
+                              _selectedTimeZone != 'Asia/Taipei')
+                            const SizedBox(height: 8),
+
+// ✅ 分類選擇區域
+                          DropdownButtonFormField<int>(
+                            value: _selectedCategoryId,
+                            decoration: const InputDecoration(
+                              labelText: '選擇分類（可選）',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.category),
+                            ),
+                            onChanged: (int? newValue) {
+                              setState(() {
+                                _selectedCategoryId = newValue;
+                              });
+                            },
+                            items: [
+                              const DropdownMenuItem<int>(
+                                value: null,
+                                child: Text('無分類'),
+                              ),
+                              ..._categories.map<DropdownMenuItem<int>>(
+                                  (TaskCategory category) {
+                                return DropdownMenuItem<int>(
+                                  value: category.id,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: category.color,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Icon(category.icon, size: 16),
+                                      const SizedBox(width: 8),
+                                      Text(category.name),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+
+                          // ✅ 音效設定區域
+                          Card(
+                            elevation: 2,
+                            child: ExpansionTile(
+                              leading: Icon(
+                                _soundEnabled
+                                    ? Icons.volume_up
+                                    : Icons.volume_off,
+                                color:
+                                    _soundEnabled ? Colors.blue : Colors.grey,
+                              ),
+                              title: Text(
+                                '音效設定',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _soundEnabled
+                                      ? Colors.black
+                                      : Colors.grey,
+                                ),
+                              ),
+                              subtitle: Text(
+                                _soundEnabled
+                                    ? '${AudioManager.getSoundById(_selectedSoundId)?.name ?? "預設音效"} - 音量${(_soundVolume * 100).round()}%'
+                                    : '已關閉音效',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              initiallyExpanded: _showSoundSettings,
+                              onExpansionChanged: (expanded) {
+                                setState(() {
+                                  _showSoundSettings = expanded;
+                                });
+                              },
                               children: [
-                                const Icon(Icons.preview,
-                                    size: 16, color: Colors.blue),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '時區預覽：${_formatScheduleTime(ScheduledMessage("", _selectedDateTime!, targetTimeZone: _selectedTimeZone, targetTimeZoneName: _selectedTimeZoneName))}',
-                                    style: const TextStyle(
-                                        fontSize: 14, color: Colors.blue),
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // 音效開關
+                                      SwitchListTile(
+                                        title: const Text('啟用音效提醒'),
+                                        subtitle: const Text('關閉後將使用靜音模式'),
+                                        value: _soundEnabled,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _soundEnabled = value;
+                                          });
+                                        },
+                                        secondary: const Icon(
+                                            Icons.notifications_active),
+                                      ),
+
+                                      if (_soundEnabled) ...[
+                                        const Divider(),
+
+                                        // 音效選擇
+                                        const Text(
+                                          '選擇音效',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedSoundId,
+                                          decoration: const InputDecoration(
+                                            border: OutlineInputBorder(),
+                                            prefixIcon: Icon(Icons.audiotrack),
+                                          ),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                _selectedSoundId = value;
+                                              });
+                                            }
+                                          },
+                                          items: AudioManager.getAllSounds()
+                                              .map((sound) {
+                                            return DropdownMenuItem<String>(
+                                              value: sound.id,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    sound.name,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                                  ),
+                                                  Text(
+                                                    sound.description,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                        const SizedBox(height: 8),
+
+                                        // 試聽按鈕
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton.icon(
+                                            onPressed: () {
+                                              final bool isMobile = !kIsWeb &&
+                                                  (Platform.isAndroid ||
+                                                      Platform.isIOS);
+                                              if (isMobile) {
+                                                // ✅ 移動平台：發送測試通知（確保 Android 有聲音）
+                                                notificationManager
+                                                    .showNotification(
+                                                  title: '🔊 試聽音效',
+                                                  body: '這是音效測試通知',
+                                                );
+                                              } else {
+                                                // ✅ 桌面平台：使用 AudioManager
+                                                AudioManager.previewSound(
+                                                    _selectedSoundId);
+                                              }
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                  content: Text(isMobile
+                                                      ? '🔊 正在播放測試通知'
+                                                      : '🔊 正在播放預覽音效'),
+                                                  duration:
+                                                      Duration(seconds: 1),
+                                                ),
+                                              );
+                                            },
+                                            icon: const Icon(
+                                                Icons.play_circle_outline,
+                                                size: 18),
+                                            label: const Text('試聽'),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+
+                                        // 音量控制
+                                        const Text(
+                                          '音量設定',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.volume_down,
+                                                size: 20),
+                                            Expanded(
+                                              child: Slider(
+                                                value: _soundVolume,
+                                                min: 0.1,
+                                                max: 1.0,
+                                                divisions: 9,
+                                                label:
+                                                    '${(_soundVolume * 100).round()}%',
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _soundVolume = value;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                            const Icon(Icons.volume_up,
+                                                size: 20),
+                                            SizedBox(
+                                              width: 40,
+                                              child: Text(
+                                                '${(_soundVolume * 100).round()}%',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+
+                                        // 重複次數
+                                        const Text(
+                                          '重複次數',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Text('播放'),
+                                            const SizedBox(width: 8),
+                                            DropdownButton<int>(
+                                              value: _soundRepeat,
+                                              onChanged: (value) {
+                                                if (value != null) {
+                                                  setState(() {
+                                                    _soundRepeat = value;
+                                                  });
+                                                }
+                                              },
+                                              items: [1, 2, 3, 5].map((count) {
+                                                return DropdownMenuItem<int>(
+                                                  value: count,
+                                                  child: Text('$count 次'),
+                                                );
+                                              }).toList(),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text('重複'),
+                                          ],
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        if (_selectedDateTime != null &&
-                            _selectedTimeZone != 'Asia/Taipei')
                           const SizedBox(height: 8),
 
-// ✅ 分類選擇區域
-                        DropdownButtonFormField<int>(
-                          value: _selectedCategoryId,
-                          decoration: const InputDecoration(
-                            labelText: '選擇分類（可選）',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.category),
-                          ),
-                          onChanged: (int? newValue) {
-                            setState(() {
-                              _selectedCategoryId = newValue;
-                            });
-                          },
-                          items: [
-                            const DropdownMenuItem<int>(
-                              value: null,
-                              child: Text('無分類'),
-                            ),
-                            ..._categories.map<DropdownMenuItem<int>>(
-                                (TaskCategory category) {
-                              return DropdownMenuItem<int>(
-                                value: category.id,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 16,
-                                      height: 16,
-                                      decoration: BoxDecoration(
-                                        color: category.color,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Icon(category.icon, size: 16),
-                                    const SizedBox(width: 8),
-                                    Text(category.name),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // ✅ 音效設定區域
-                        Card(
-                          elevation: 2,
-                          child: ExpansionTile(
-                            leading: Icon(
-                              _soundEnabled
-                                  ? Icons.volume_up
-                                  : Icons.volume_off,
-                              color: _soundEnabled ? Colors.blue : Colors.grey,
-                            ),
-                            title: Text(
-                              '音效設定',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color:
-                                    _soundEnabled ? Colors.black : Colors.grey,
-                              ),
-                            ),
-                            subtitle: Text(
-                              _soundEnabled
-                                  ? '${AudioManager.getSoundById(_selectedSoundId)?.name ?? "預設音效"} - 音量${(_soundVolume * 100).round()}%'
-                                  : '已關閉音效',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            initiallyExpanded: _showSoundSettings,
-                            onExpansionChanged: (expanded) {
-                              setState(() {
-                                _showSoundSettings = expanded;
-                              });
-                            },
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 音效開關
-                                    SwitchListTile(
-                                      title: const Text('啟用音效提醒'),
-                                      subtitle: const Text('關閉後將使用靜音模式'),
-                                      value: _soundEnabled,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _soundEnabled = value;
-                                        });
-                                      },
-                                      secondary: const Icon(
-                                          Icons.notifications_active),
-                                    ),
-
-                                    if (_soundEnabled) ...[
-                                      const Divider(),
-
-                                      // 音效選擇
-                                      const Text(
-                                        '選擇音效',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedSoundId,
-                                        decoration: const InputDecoration(
-                                          border: OutlineInputBorder(),
-                                          prefixIcon: Icon(Icons.audiotrack),
-                                        ),
-                                        onChanged: (value) {
-                                          if (value != null) {
-                                            setState(() {
-                                              _selectedSoundId = value;
-                                            });
-                                          }
-                                        },
-                                        items: AudioManager.getAllSounds()
-                                            .map((sound) {
-                                          return DropdownMenuItem<String>(
-                                            value: sound.id,
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  sound.name,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                ),
-                                                Text(
-                                                  sound.description,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // 試聽按鈕
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton.icon(
-                                          onPressed: () {
-                                            final bool isMobile = !kIsWeb &&
-                                                (Platform.isAndroid ||
-                                                    Platform.isIOS);
-                                            if (isMobile) {
-                                              // ✅ 移動平台：發送測試通知（確保 Android 有聲音）
-                                              notificationManager
-                                                  .showNotification(
-                                                title: '🔊 試聽音效',
-                                                body: '這是音效測試通知',
-                                              );
-                                            } else {
-                                              // ✅ 桌面平台：使用 AudioManager
-                                              AudioManager.previewSound(
-                                                  _selectedSoundId);
-                                            }
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(isMobile
-                                                    ? '🔊 正在播放測試通知'
-                                                    : '🔊 正在播放預覽音效'),
-                                                duration: Duration(seconds: 1),
-                                              ),
-                                            );
-                                          },
-                                          icon: const Icon(
-                                              Icons.play_circle_outline,
-                                              size: 18),
-                                          label: const Text('試聽'),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // 音量控制
-                                      const Text(
-                                        '音量設定',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.volume_down,
-                                              size: 20),
-                                          Expanded(
-                                            child: Slider(
-                                              value: _soundVolume,
-                                              min: 0.1,
-                                              max: 1.0,
-                                              divisions: 9,
-                                              label:
-                                                  '${(_soundVolume * 100).round()}%',
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _soundVolume = value;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                          const Icon(Icons.volume_up, size: 20),
-                                          SizedBox(
-                                            width: 40,
-                                            child: Text(
-                                              '${(_soundVolume * 100).round()}%',
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  const TextStyle(fontSize: 12),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // 重複次數
-                                      const Text(
-                                        '重複次數',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Text('播放'),
-                                          const SizedBox(width: 8),
-                                          DropdownButton<int>(
-                                            value: _soundRepeat,
-                                            onChanged: (value) {
-                                              if (value != null) {
-                                                setState(() {
-                                                  _soundRepeat = value;
-                                                });
-                                              }
-                                            },
-                                            items: [1, 2, 3, 5].map((count) {
-                                              return DropdownMenuItem<int>(
-                                                value: count,
-                                                child: Text('$count 次'),
-                                              );
-                                            }).toList(),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Text('重複'),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // ✅ 震動設定區域
-                        Card(
-                          elevation: 2,
-                          child: ExpansionTile(
-                            leading: Icon(
-                              _vibrationEnabled
-                                  ? Icons.vibration
-                                  : Icons.phonelink_erase,
-                              color: _vibrationEnabled
-                                  ? Colors.purple
-                                  : Colors.grey,
-                            ),
-                            title: Text(
-                              '震動設定',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                          // ✅ 震動設定區域
+                          Card(
+                            elevation: 2,
+                            child: ExpansionTile(
+                              leading: Icon(
+                                _vibrationEnabled
+                                    ? Icons.vibration
+                                    : Icons.phonelink_erase,
                                 color: _vibrationEnabled
-                                    ? Colors.black
+                                    ? Colors.purple
                                     : Colors.grey,
                               ),
-                            ),
-                            subtitle: Text(
-                              _vibrationEnabled
-                                  ? '${VibrationManager.getVibrationPatternById(_selectedVibrationPattern)?.name ?? "預設震動"} - 強度${(_vibrationIntensity * 100).round()}%'
-                                  : '已關閉震動',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
+                              title: Text(
+                                '震動設定',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _vibrationEnabled
+                                      ? Colors.black
+                                      : Colors.grey,
+                                ),
                               ),
-                            ),
-                            initiallyExpanded: _showVibrationSettings,
-                            onExpansionChanged: (expanded) {
-                              setState(() {
-                                _showVibrationSettings = expanded;
-                              });
-                            },
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // 震動開關
-                                    SwitchListTile(
-                                      title: const Text('啟用震動提醒'),
-                                      subtitle: const Text('關閉後將使用靜音模式'),
-                                      value: _vibrationEnabled,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _vibrationEnabled = value;
-                                        });
-                                      },
-                                      secondary: const Icon(Icons.vibration),
-                                    ),
-
-                                    if (_vibrationEnabled) ...[
-                                      const Divider(),
-
-                                      // 震動模式選擇
-                                      const Text(
-                                        '選擇震動模式',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      DropdownButtonFormField<String>(
-                                        value: _selectedVibrationPattern,
-                                        decoration: const InputDecoration(
-                                          border: OutlineInputBorder(),
-                                          prefixIcon: Icon(Icons.vibration),
-                                        ),
+                              subtitle: Text(
+                                _vibrationEnabled
+                                    ? '${VibrationManager.getVibrationPatternById(_selectedVibrationPattern)?.name ?? "預設震動"} - 強度${(_vibrationIntensity * 100).round()}%'
+                                    : '已關閉震動',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              initiallyExpanded: _showVibrationSettings,
+                              onExpansionChanged: (expanded) {
+                                setState(() {
+                                  _showVibrationSettings = expanded;
+                                });
+                              },
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // 震動開關
+                                      SwitchListTile(
+                                        title: const Text('啟用震動提醒'),
+                                        subtitle: const Text('關閉後將使用靜音模式'),
+                                        value: _vibrationEnabled,
                                         onChanged: (value) {
-                                          if (value != null) {
-                                            setState(() {
-                                              _selectedVibrationPattern = value;
-                                            });
-                                          }
+                                          setState(() {
+                                            _vibrationEnabled = value;
+                                          });
                                         },
-                                        items: VibrationManager
-                                                .getAllVibrationPatterns()
-                                            .map((pattern) {
-                                          return DropdownMenuItem<String>(
-                                            value: pattern.id,
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  pattern.name,
-                                                  style: const TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.w500),
-                                                ),
-                                                Text(
-                                                  pattern.description,
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
+                                        secondary: const Icon(Icons.vibration),
                                       ),
-                                      const SizedBox(height: 8),
 
-                                      // 試震按鈕
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton.icon(
-                                          onPressed: () {
-                                            VibrationManager.previewVibration(
-                                                _selectedVibrationPattern);
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                content: Text('📳 正在播放預覽震動'),
-                                                duration: Duration(seconds: 1),
+                                      if (_vibrationEnabled) ...[
+                                        const Divider(),
+
+                                        // 震動模式選擇
+                                        const Text(
+                                          '選擇震動模式',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        DropdownButtonFormField<String>(
+                                          value: _selectedVibrationPattern,
+                                          decoration: const InputDecoration(
+                                            border: OutlineInputBorder(),
+                                            prefixIcon: Icon(Icons.vibration),
+                                          ),
+                                          onChanged: (value) {
+                                            if (value != null) {
+                                              setState(() {
+                                                _selectedVibrationPattern =
+                                                    value;
+                                              });
+                                            }
+                                          },
+                                          items: VibrationManager
+                                                  .getAllVibrationPatterns()
+                                              .map((pattern) {
+                                            return DropdownMenuItem<String>(
+                                              value: pattern.id,
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    pattern.name,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                                  ),
+                                                  Text(
+                                                    pattern.description,
+                                                    style: TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             );
-                                          },
-                                          icon: const Icon(Icons.vibration,
-                                              size: 18),
-                                          label: const Text('試震'),
+                                          }).toList(),
                                         ),
-                                      ),
-                                      const SizedBox(height: 8),
+                                        const SizedBox(height: 8),
 
-                                      // 震動強度控制
-                                      const Text(
-                                        '震動強度',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.vibration,
-                                              size: 20, color: Colors.grey),
-                                          Expanded(
-                                            child: Slider(
-                                              value: _vibrationIntensity,
-                                              min: 0.1,
-                                              max: 1.0,
-                                              divisions: 9,
-                                              label:
-                                                  '${(_vibrationIntensity * 100).round()}%',
-                                              onChanged: (value) {
-                                                setState(() {
-                                                  _vibrationIntensity = value;
-                                                });
-                                              },
-                                            ),
-                                          ),
-                                          const Icon(Icons.vibration, size: 20),
-                                          SizedBox(
-                                            width: 40,
-                                            child: Text(
-                                              '${(_vibrationIntensity * 100).round()}%',
-                                              textAlign: TextAlign.center,
-                                              style:
-                                                  const TextStyle(fontSize: 12),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-
-                                      // 重複次數
-                                      const Text(
-                                        '重複次數',
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Row(
-                                        children: [
-                                          const Text('震動'),
-                                          const SizedBox(width: 8),
-                                          DropdownButton<int>(
-                                            value: _vibrationRepeat,
-                                            onChanged: (value) {
-                                              if (value != null) {
-                                                setState(() {
-                                                  _vibrationRepeat = value;
-                                                });
-                                              }
-                                            },
-                                            items: [1, 2, 3, 5].map((count) {
-                                              return DropdownMenuItem<int>(
-                                                value: count,
-                                                child: Text('$count 次'),
+                                        // 試震按鈕
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton.icon(
+                                            onPressed: () {
+                                              VibrationManager.previewVibration(
+                                                  _selectedVibrationPattern);
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('📳 正在播放預覽震動'),
+                                                  duration:
+                                                      Duration(seconds: 1),
+                                                ),
                                               );
-                                            }).toList(),
+                                            },
+                                            icon: const Icon(Icons.vibration,
+                                                size: 18),
+                                            label: const Text('試震'),
                                           ),
-                                          const SizedBox(width: 8),
-                                          const Text('重複'),
-                                        ],
-                                      ),
+                                        ),
+                                        const SizedBox(height: 8),
+
+                                        // 震動強度控制
+                                        const Text(
+                                          '震動強度',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.vibration,
+                                                size: 20, color: Colors.grey),
+                                            Expanded(
+                                              child: Slider(
+                                                value: _vibrationIntensity,
+                                                min: 0.1,
+                                                max: 1.0,
+                                                divisions: 9,
+                                                label:
+                                                    '${(_vibrationIntensity * 100).round()}%',
+                                                onChanged: (value) {
+                                                  setState(() {
+                                                    _vibrationIntensity = value;
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                            const Icon(Icons.vibration,
+                                                size: 20),
+                                            SizedBox(
+                                              width: 40,
+                                              child: Text(
+                                                '${(_vibrationIntensity * 100).round()}%',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+
+                                        // 重複次數
+                                        const Text(
+                                          '重複次數',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Text('震動'),
+                                            const SizedBox(width: 8),
+                                            DropdownButton<int>(
+                                              value: _vibrationRepeat,
+                                              onChanged: (value) {
+                                                if (value != null) {
+                                                  setState(() {
+                                                    _vibrationRepeat = value;
+                                                  });
+                                                }
+                                              },
+                                              items: [1, 2, 3, 5].map((count) {
+                                                return DropdownMenuItem<int>(
+                                                  value: count,
+                                                  child: Text('$count 次'),
+                                                );
+                                              }).toList(),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            const Text('重複'),
+                                          ],
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
 
 // 重複模式選擇
-                        DropdownButtonFormField<String>(
-                          value: _repeatType,
-                          decoration: const InputDecoration(
-                            labelText: '重複模式',
-                            border: OutlineInputBorder(),
-                          ),
-                          // ✅ 智能同步功能整合：使用 _onRepeatTypeChanged
-                          onChanged: (value) => _onRepeatTypeChanged(value!),
-                          items: const [
-                            DropdownMenuItem(value: 'none', child: Text('不重複')),
-                            DropdownMenuItem(value: 'daily', child: Text('每日')),
-                            DropdownMenuItem(
-                                value: 'weekly', child: Text('每週')),
-                            DropdownMenuItem(
-                                value: 'weekdays', child: Text('平日 (週一至週五)')),
-                            DropdownMenuItem(
-                                value: 'monthly', child: Text('每月')),
-                            DropdownMenuItem(
-                                value: 'monthlyDates', child: Text('每月指定日期')),
-                            DropdownMenuItem(
-                                value: 'monthlyOrdinal',
-                                child: Text('每月第幾個星期幾')),
-                            DropdownMenuItem(
-                                value: 'yearly', child: Text('每年')),
-                            DropdownMenuItem(
-                                value: 'interval', child: Text('自訂間隔')),
-                            DropdownMenuItem(
-                                value: 'custom', child: Text('自訂次數')),
-                          ],
-                        ),
-
-                        // ✅ 條件性UI顯示：每週星期選擇器
-                        if (_repeatType == 'weekly') ...[
-                          const SizedBox(height: 8),
-                          const Text('選擇星期幾',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            children: [
-                              for (int i = 0; i < 7; i++)
-                                FilterChip(
-                                  label: Text(
-                                      ['日', '一', '二', '三', '四', '五', '六'][i]),
-                                  selected: _selectedWeekdays.contains(i),
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedWeekdays.add(i);
-                                      } else {
-                                        _selectedWeekdays.remove(i);
-                                      }
-                                    });
-                                  },
-                                ),
+                          DropdownButtonFormField<String>(
+                            value: _repeatType,
+                            decoration: const InputDecoration(
+                              labelText: '重複模式',
+                              border: OutlineInputBorder(),
+                            ),
+                            // ✅ 智能同步功能整合：使用 _onRepeatTypeChanged
+                            onChanged: (value) => _onRepeatTypeChanged(value!),
+                            items: const [
+                              DropdownMenuItem(
+                                  value: 'none', child: Text('不重複')),
+                              DropdownMenuItem(
+                                  value: 'daily', child: Text('每日')),
+                              DropdownMenuItem(
+                                  value: 'weekly', child: Text('每週')),
+                              DropdownMenuItem(
+                                  value: 'weekdays', child: Text('平日 (週一至週五)')),
+                              DropdownMenuItem(
+                                  value: 'monthly', child: Text('每月')),
+                              DropdownMenuItem(
+                                  value: 'monthlyDates', child: Text('每月指定日期')),
+                              DropdownMenuItem(
+                                  value: 'monthlyOrdinal',
+                                  child: Text('每月第幾個星期幾')),
+                              DropdownMenuItem(
+                                  value: 'yearly', child: Text('每年')),
+                              DropdownMenuItem(
+                                  value: 'interval', child: Text('自訂間隔')),
+                              DropdownMenuItem(
+                                  value: 'custom', child: Text('自訂次數')),
                             ],
                           ),
-                        ],
 
-                        // ✅ 條件性UI顯示：每月多日選擇器
-                        if (_repeatType == 'monthly') ...[
-                          const SizedBox(height: 8),
-                          const Text('選擇每月日期',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: [
-                              for (int day = 1; day <= 31; day++)
-                                FilterChip(
-                                  label: Text('$day'),
-                                  selected: _selectedDates.contains(day),
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      if (selected) {
-                                        _selectedDates.add(day);
-                                      } else {
-                                        _selectedDates.remove(day);
-                                      }
-                                    });
-                                  },
-                                ),
-                            ],
-                          ),
-                        ],
-
-                        // ✅ 條件性UI顯示：EA功能設定
-                        if (_repeatType == 'monthly_ordinal') ...[
-                          const SizedBox(height: 8),
-                          const Text('EA功能：每月第N個星期X',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Text('每月第'),
-                              const SizedBox(width: 8),
-                              DropdownButton<int>(
-                                value: _monthlyOrdinal,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _monthlyOrdinal = value;
-                                    });
-                                  }
-                                },
-                                items: const [
-                                  DropdownMenuItem(value: 1, child: Text('1')),
-                                  DropdownMenuItem(value: 2, child: Text('2')),
-                                  DropdownMenuItem(value: 3, child: Text('3')),
-                                  DropdownMenuItem(value: 4, child: Text('4')),
-                                  DropdownMenuItem(
-                                      value: 5, child: Text('最後一')),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('個'),
-                              const SizedBox(width: 8),
-                              DropdownButton<int>(
-                                value: _monthlyWeekday,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _monthlyWeekday = value;
-                                    });
-                                  }
-                                },
-                                items: const [
-                                  DropdownMenuItem(
-                                      value: 0, child: Text('星期日')),
-                                  DropdownMenuItem(
-                                      value: 1, child: Text('星期一')),
-                                  DropdownMenuItem(
-                                      value: 2, child: Text('星期二')),
-                                  DropdownMenuItem(
-                                      value: 3, child: Text('星期三')),
-                                  DropdownMenuItem(
-                                      value: 4, child: Text('星期四')),
-                                  DropdownMenuItem(
-                                      value: 5, child: Text('星期五')),
-                                  DropdownMenuItem(
-                                      value: 6, child: Text('星期六')),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-
-                        // ✅ 條件性UI顯示：自訂間隔重複設定
-                        if (_repeatType == 'repeat_interval') ...[
-                          const SizedBox(height: 8),
-                          const Text('自訂間隔重複',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Text('每'),
-                              const SizedBox(width: 8),
-                              SizedBox(
-                                width: 80,
-                                child: TextField(
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 8),
+                          // ✅ 條件性UI顯示：每週星期選擇器
+                          if (_repeatType == 'weekly') ...[
+                            const SizedBox(height: 8),
+                            const Text('選擇星期幾',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                for (int i = 0; i < 7; i++)
+                                  FilterChip(
+                                    label: Text(
+                                        ['日', '一', '二', '三', '四', '五', '六'][i]),
+                                    selected: _selectedWeekdays.contains(i),
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        if (selected) {
+                                          _selectedWeekdays.add(i);
+                                        } else {
+                                          _selectedWeekdays.remove(i);
+                                        }
+                                      });
+                                    },
                                   ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (value) {
-                                    final parsed = int.tryParse(value);
-                                    if (parsed != null && parsed > 0) {
-                                      setState(() {
-                                        _repeatInterval = parsed;
-                                      });
-                                    }
-                                  },
-                                  controller: TextEditingController(
-                                      text: _repeatInterval.toString()),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              DropdownButton<String>(
-                                value: _repeatIntervalUnit,
-                                onChanged: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      _repeatIntervalUnit = value;
-                                    });
-                                  }
-                                },
-                                items: const [
-                                  DropdownMenuItem(
-                                      value: 'days', child: Text('天')),
-                                  DropdownMenuItem(
-                                      value: 'weeks', child: Text('週')),
-                                  DropdownMenuItem(
-                                      value: 'months', child: Text('月')),
-                                ],
-                              ),
-                              const Text('重複一次'),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
 
-                        // ✅ 條件性UI顯示：開始和結束日期（重複模式時才顯示）
-                        if (_repeatType != 'none') ...[
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    final date = await showDatePicker(
-                                      context: context,
-                                      initialDate: _startDate ?? DateTime.now(),
-                                      firstDate: DateTime.now(),
-                                      lastDate: DateTime.now()
-                                          .add(const Duration(days: 365 * 5)),
-                                    );
-                                    if (date != null) {
+                          // ✅ 條件性UI顯示：每月多日選擇器
+                          if (_repeatType == 'monthly') ...[
+                            const SizedBox(height: 8),
+                            const Text('選擇每月日期',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: [
+                                for (int day = 1; day <= 31; day++)
+                                  FilterChip(
+                                    label: Text('$day'),
+                                    selected: _selectedDates.contains(day),
+                                    onSelected: (selected) {
                                       setState(() {
-                                        _startDate = date;
+                                        if (selected) {
+                                          _selectedDates.add(day);
+                                        } else {
+                                          _selectedDates.remove(day);
+                                        }
+                                      });
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ],
+
+                          // ✅ 條件性UI顯示：EA功能設定
+                          if (_repeatType == 'monthly_ordinal') ...[
+                            const SizedBox(height: 8),
+                            const Text('EA功能：每月第N個星期X',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('每月第'),
+                                const SizedBox(width: 8),
+                                DropdownButton<int>(
+                                  value: _monthlyOrdinal,
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _monthlyOrdinal = value;
                                       });
                                     }
                                   },
-                                  child: Text(_startDate == null
-                                      ? '選擇開始日'
-                                      : '開始：${DateFormat('yyyy/MM/dd').format(_startDate!)}'),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 1, child: Text('1')),
+                                    DropdownMenuItem(
+                                        value: 2, child: Text('2')),
+                                    DropdownMenuItem(
+                                        value: 3, child: Text('3')),
+                                    DropdownMenuItem(
+                                        value: 4, child: Text('4')),
+                                    DropdownMenuItem(
+                                        value: 5, child: Text('最後一')),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    final date = await showDatePicker(
-                                      context: context,
-                                      initialDate: _endDate ??
-                                          DateTime.now()
-                                              .add(const Duration(days: 30)),
-                                      firstDate: _startDate ?? DateTime.now(),
-                                      lastDate: DateTime.now()
-                                          .add(const Duration(days: 365 * 5)),
-                                    );
-                                    if (date != null) {
+                                const SizedBox(width: 8),
+                                const Text('個'),
+                                const SizedBox(width: 8),
+                                DropdownButton<int>(
+                                  value: _monthlyWeekday,
+                                  onChanged: (value) {
+                                    if (value != null) {
                                       setState(() {
-                                        _endDate = date;
+                                        _monthlyWeekday = value;
                                       });
                                     }
                                   },
-                                  child: Text(_endDate == null
-                                      ? '選擇結束日'
-                                      : '結束：${DateFormat('yyyy/MM/dd').format(_endDate!)}'),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 0, child: Text('星期日')),
+                                    DropdownMenuItem(
+                                        value: 1, child: Text('星期一')),
+                                    DropdownMenuItem(
+                                        value: 2, child: Text('星期二')),
+                                    DropdownMenuItem(
+                                        value: 3, child: Text('星期三')),
+                                    DropdownMenuItem(
+                                        value: 4, child: Text('星期四')),
+                                    DropdownMenuItem(
+                                        value: 5, child: Text('星期五')),
+                                    DropdownMenuItem(
+                                        value: 6, child: Text('星期六')),
+                                  ],
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ],
+
+                          // ✅ 條件性UI顯示：自訂間隔重複設定
+                          if (_repeatType == 'repeat_interval') ...[
+                            const SizedBox(height: 8),
+                            const Text('自訂間隔重複',
+                                style: TextStyle(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Text('每'),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  width: 80,
+                                  child: TextField(
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 8),
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                    onChanged: (value) {
+                                      final parsed = int.tryParse(value);
+                                      if (parsed != null && parsed > 0) {
+                                        setState(() {
+                                          _repeatInterval = parsed;
+                                        });
+                                      }
+                                    },
+                                    controller: TextEditingController(
+                                        text: _repeatInterval.toString()),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                DropdownButton<String>(
+                                  value: _repeatIntervalUnit,
+                                  onChanged: (value) {
+                                    if (value != null) {
+                                      setState(() {
+                                        _repeatIntervalUnit = value;
+                                      });
+                                    }
+                                  },
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'days', child: Text('天')),
+                                    DropdownMenuItem(
+                                        value: 'weeks', child: Text('週')),
+                                    DropdownMenuItem(
+                                        value: 'months', child: Text('月')),
+                                  ],
+                                ),
+                                const Text('重複一次'),
+                              ],
+                            ),
+                          ],
+
+                          // ✅ 條件性UI顯示：開始和結束日期（重複模式時才顯示）
+                          if (_repeatType != 'none') ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      final date = await showDatePicker(
+                                        context: context,
+                                        initialDate:
+                                            _startDate ?? DateTime.now(),
+                                        firstDate: DateTime.now(),
+                                        lastDate: DateTime.now()
+                                            .add(const Duration(days: 365 * 5)),
+                                      );
+                                      if (date != null) {
+                                        setState(() {
+                                          _startDate = date;
+                                        });
+                                      }
+                                    },
+                                    child: Text(_startDate == null
+                                        ? '選擇開始日'
+                                        : '開始：${DateFormat('yyyy/MM/dd').format(_startDate!)}'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      final date = await showDatePicker(
+                                        context: context,
+                                        initialDate: _endDate ??
+                                            DateTime.now()
+                                                .add(const Duration(days: 30)),
+                                        firstDate: _startDate ?? DateTime.now(),
+                                        lastDate: DateTime.now()
+                                            .add(const Duration(days: 365 * 5)),
+                                      );
+                                      if (date != null) {
+                                        setState(() {
+                                          _endDate = date;
+                                        });
+                                      }
+                                    },
+                                    child: Text(_endDate == null
+                                        ? '選擇結束日'
+                                        : '結束：${DateFormat('yyyy/MM/dd').format(_endDate!)}'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ], // 進階設定結束
                         ],
                         const SizedBox(height: 8),
                         // ✅ 收件人選擇

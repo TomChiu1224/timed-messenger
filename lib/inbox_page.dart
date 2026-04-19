@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'firebase_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -9,15 +10,54 @@ class InboxPage extends StatefulWidget {
   State<InboxPage> createState() => _InboxPageState();
 }
 
-class _InboxPageState extends State<InboxPage> {
+class _InboxPageState extends State<InboxPage>
+    with SingleTickerProviderStateMixin {
   final FirebaseService _firebaseService = FirebaseService();
   List<Map<String, dynamic>> _messages = [];
+  List<Map<String, dynamic>> _sentMessages = [];
   bool _isLoading = true;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _loadMessages();
+    _loadSentMessages();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSentMessages() async {
+    try {
+      final user = FirebaseService().currentUser;
+      if (user == null) return;
+      final snapshot = await FirebaseFirestore.instance
+          .collection('scheduled_messages')
+          .where('senderId', isEqualTo: user.uid)
+          .get();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
+      list.sort((a, b) {
+        final aTime = a['scheduledTime'] ?? 0;
+        final bTime = b['scheduledTime'] ?? 0;
+        return (bTime as int).compareTo(aTime as int);
+      });
+      if (mounted) {
+        setState(() {
+          _sentMessages = list;
+        });
+      }
+    } catch (e) {
+      print('❌ 載入已發送失敗：$e');
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -131,45 +171,143 @@ class _InboxPageState extends State<InboxPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('收件匣'),
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadMessages,
+            onPressed: () {
+              _loadMessages();
+              _loadSentMessages();
+            },
             tooltip: '重新整理',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(icon: Icon(Icons.inbox), text: '收到'),
+            Tab(icon: Icon(Icons.send), text: '已發送'),
+          ],
+        ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _messages.isEmpty
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // ===== Tab 1：收到 =====
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _messages.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inbox, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text('目前沒有收到任何訊息',
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 16)),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadMessages,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          final isUnread = msg['status'] != 'read';
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                                vertical: 4, horizontal: 4),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor:
+                                    _statusColor(msg['status'] as String?),
+                                child: Icon(
+                                  isUnread ? Icons.mail : Icons.mail_outline,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                msg['message'] ?? '（無內容）',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: isUnread
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                              subtitle: Text(
+                                '來自：${msg['senderName'] ?? '未知'} · ${_formatTime(msg['scheduledTime'])}',
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              trailing: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: _statusColor(msg['status'] as String?)
+                                      .withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _statusText(msg['status'] as String?),
+                                  style: TextStyle(
+                                    color:
+                                        _statusColor(msg['status'] as String?),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              onTap: () => _openMessage(msg),
+                              onLongPress: () => _confirmDelete(msg),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+          // ===== Tab 2：已發送 =====
+          _sentMessages.isEmpty
               ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.inbox, size: 64, color: Colors.grey),
+                      Icon(Icons.send, size: 64, color: Colors.grey),
                       SizedBox(height: 16),
-                      Text('目前沒有收到任何訊息',
+                      Text('目前沒有已發送的訊息',
                           style: TextStyle(color: Colors.grey, fontSize: 16)),
                     ],
                   ),
                 )
               : RefreshIndicator(
-                  onRefresh: _loadMessages,
+                  onRefresh: _loadSentMessages,
                   child: ListView.builder(
                     padding: const EdgeInsets.all(8),
-                    itemCount: _messages.length,
+                    itemCount: _sentMessages.length,
                     itemBuilder: (context, index) {
-                      final msg = _messages[index];
-                      final isUnread = msg['status'] != 'read';
+                      final msg = _sentMessages[index];
+                      final status = msg['status'] as String? ?? '';
+                      final isRead = status == 'read';
+                      final isTriggered = status == 'triggered';
                       return Card(
                         margin: const EdgeInsets.symmetric(
                             vertical: 4, horizontal: 4),
                         child: ListTile(
                           leading: CircleAvatar(
-                            backgroundColor:
-                                _statusColor(msg['status'] as String?),
+                            backgroundColor: isRead
+                                ? Colors.green
+                                : isTriggered
+                                    ? Colors.orange
+                                    : Colors.blue,
                             child: Icon(
-                              isUnread ? Icons.mail : Icons.mail_outline,
+                              isRead ? Icons.done_all : Icons.send,
                               color: Colors.white,
                               size: 20,
                             ),
@@ -178,39 +316,45 @@ class _InboxPageState extends State<InboxPage> {
                             msg['message'] ?? '（無內容）',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: isUnread
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
                           ),
                           subtitle: Text(
-                            '來自：${msg['senderName'] ?? '未知'}  ·  ${_formatTime(msg['scheduledTime'])}',
+                            '收件人：${msg['receiverName'] ?? '未知'} · ${_formatTime(msg['scheduledTime'])}',
                             style: const TextStyle(fontSize: 12),
                           ),
                           trailing: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: _statusColor(msg['status'] as String?)
-                                  .withOpacity(0.15),
+                              color: isRead
+                                  ? Colors.green.withOpacity(0.15)
+                                  : isTriggered
+                                      ? Colors.orange.withOpacity(0.15)
+                                      : Colors.blue.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              _statusText(msg['status'] as String?),
+                              isRead
+                                  ? '✅ 已讀'
+                                  : isTriggered
+                                      ? '👁 未讀'
+                                      : '⏳ 等待',
                               style: TextStyle(
-                                color: _statusColor(msg['status'] as String?),
+                                color: isRead
+                                    ? Colors.green
+                                    : isTriggered
+                                        ? Colors.orange
+                                        : Colors.blue,
                                 fontSize: 12,
                               ),
                             ),
                           ),
-                          onTap: () => _openMessage(msg),
-                          onLongPress: () => _confirmDelete(msg),
                         ),
                       );
                     },
                   ),
                 ),
+        ],
+      ),
     );
   }
 }

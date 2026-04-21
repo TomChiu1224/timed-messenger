@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>愛傳時 隱私權政策</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple-dark: #4a1080;
+    --purple-mid: #7b2fbe;
+    --purple-light: #a855f7;
+    --purple-pale: #f3e8ff;
+    --gold: #c9a84c;
+    --text-dark: #1a1a2e;
+    --text-body: #3d3d5c;
+    --text-muted: #7070a0;
+    --white: #ffffff;
+    --bg: #faf8ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text-body);
+    line-height: 1.9;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, var(--purple-dark) 0%, var(--purple-mid) 60%, var(--purple-light) 100%);
+    color: white;
+    padding: 60px 24px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 220px; height: 220px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; right: -40px;
+    width: 280px; height: 280px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+
+  .app-icon {
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 36px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  header h1 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  header .subtitle {
+    font-size: 0.9rem;
+    opacity: 0.75;
+    letter-spacing: 0.08em;
+  }
+
+  .update-date {
+    display: inline-block;
+    margin-top: 18px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 5px 18px;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+  }
+
+  /* Main */
+  main {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .intro-box {
+    background: var(--purple-pale);
+    border-left: 4px solid var(--purple-light);
+    border-radius: 0 12px 12px 0;
+    padding: 20px 24px;
+    margin-bottom: 48px;
+    font-size: 0.95rem;
+    color: var(--purple-dark);
+  }
+
+  section {
+    margin-bottom: 44px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--purple-pale);
+  }
+
+  .section-num {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-light));
+    color: white;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  h2 {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--purple-dark);
+    letter-spacing: 0.03em;
+  }
+
+  p {
+    font-size: 0.93rem;
+    color: var(--text-body);
+    margin-bottom: 12px;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  ul li {
+    font-size: 0.93rem;
+    padding: 6px 0 6px 22px;
+    position: relative;
+    color: var(--text-body);
+    border-bottom: 1px solid #f0ebff;
+  }
+
+  ul li:last-child { border-bottom: none; }
+
+  ul li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--purple-light);
+    font-size: 0.75rem;
+    top: 8px;
+  }
+
+  .tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .tag {
+    background: var(--purple-pale);
+    color: var(--purple-mid);
+    border: 1px solid #d8b4fe;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+
+  .highlight-box {
+    background: #fff;
+    border: 1px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 12px;
+  }
+
+  .contact-card {
+    background: linear-gradient(135deg, var(--purple-dark), var(--purple-mid));
+    color: white;
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  .contact-card a {
+    color: #e9d5ff;
+    text-decoration: none;
+    font-size: 1rem;
+    font-weight: 500;
+    display: block;
+    margin-top: 8px;
+  }
+
+  .contact-card a:hover { color: white; }
+
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    background: var(--purple-dark);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.6rem; }
+    main { padding: 32px 16px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="app-icon">⏰💜</div>
+  <h1>愛傳時 TimedMessenger</h1>
+  <div class="subtitle">隱私權政策 Privacy Policy</div>
+  <div class="update-date">最後更新：2025 年 7 月</div>
+</header>
+
+<main>
+
+  <div class="intro-box">
+    歡迎使用愛傳時（TimedMessenger）。本隱私權政策說明我們如何收集、使用及保護您的個人資料。使用本 App 即表示您同意本政策的內容。
+  </div>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">一</div>
+      <h2>我們收集哪些資料</h2>
+    </div>
+    <p>為了提供服務，我們會收集以下資料：</p>
+    <div class="highlight-box">
+      <ul>
+        <li>您的 Google 帳號基本資訊（名稱、電子郵件、頭像）</li>
+        <li>您在 App 內設定的使用者名稱</li>
+        <li>您傳送及接收的排程訊息內容與時間</li>
+        <li>好友關係資料（好友名單、好友申請記錄）</li>
+        <li>裝置推播通知 Token（FCM Token）</li>
+        <li>App 使用時間與基本操作記錄</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">二</div>
+      <h2>我們如何使用資料</h2>
+    </div>
+    <p>收集的資料僅用於以下目的：</p>
+    <ul>
+      <li>提供帳號登入與身份識別功能</li>
+      <li>在您指定的時間將訊息傳送給指定的好友</li>
+      <li>發送推播通知以提醒您有新訊息</li>
+      <li>管理好友關係與申請系統</li>
+      <li>改善 App 功能與使用體驗</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">三</div>
+      <h2>資料的儲存與安全</h2>
+    </div>
+    <p>您的資料儲存於 Google Firebase 雲端平台，受到 Google 的安全機制保護。我們採取合理的技術措施保護您的個人資料，防止未經授權的存取、洩露或竄改。</p>
+    <div class="tag-grid">
+      <span class="tag">🔐 Firebase 加密儲存</span>
+      <span class="tag">🛡️ Google 安全基礎設施</span>
+      <span class="tag">🔒 存取權限控管</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">四</div>
+      <h2>資料分享</h2>
+    </div>
+    <p>我們不會將您的個人資料出售、出租或提供給任何第三方。</p>
+    <p>僅在以下情況下才會分享資料：</p>
+    <ul>
+      <li>您主動傳送訊息給好友時，對方可看到您的名稱與訊息內容</li>
+      <li>您傳送好友申請時，對方可看到您的使用者名稱</li>
+      <li>法律要求或司法程序需要時</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">五</div>
+      <h2>第三方服務</h2>
+    </div>
+    <p>本 App 使用以下第三方服務，各服務有其獨立的隱私權政策：</p>
+    <ul>
+      <li>Google Firebase — 身份驗證、資料庫、推播通知</li>
+      <li>Google Sign-In — 帳號登入服務</li>
+      <li>Firebase Cloud Messaging (FCM) — 推播通知傳送</li>
+    </ul>
+    <p style="margin-top:12px; font-size:0.85rem; color:var(--text-muted);">請參閱 <a href="https://policies.google.com/privacy" target="_blank" style="color:var(--purple-mid);">Google 隱私權政策</a> 了解詳情。</p>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">六</div>
+      <h2>您的權利</h2>
+    </div>
+    <p>您隨時可以：</p>
+    <ul>
+      <li>刪除您的帳號及所有相關資料</li>
+      <li>要求我們提供您的個人資料副本</li>
+      <li>要求我們更正或刪除您的個人資料</li>
+      <li>撤回對資料處理的同意</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">七</div>
+      <h2>兒童隱私</h2>
+    </div>
+    <p>本 App 不針對 13 歲以下兒童提供服務。我們不會故意收集兒童的個人資料。若您發現有未成年人使用本服務，請聯繫我們。</p>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">八</div>
+      <h2>聯絡我們</h2>
+    </div>
+    <p>如果您對本隱私權政策有任何疑問，請透過以下方式聯繫我們：</p>
+    <div class="contact-card">
+      <div style="font-size:0.85rem; opacity:0.8;">電子郵件</div>
+      <a href="mailto:maddox013190@gmail.com">maddox013190@gmail.com</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  © 2025 愛傳時 TimedMessenger．保留所有權利
+</footer>
+
+</body>
+</html>

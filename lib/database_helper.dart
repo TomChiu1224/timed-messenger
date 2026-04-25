@@ -22,7 +22,7 @@ class DatabaseHelper {
     String path = join(await getDatabasesPath(), 'scheduled_messages.db');
     return await openDatabase(
       path,
-      version: 6, // ✅ 版本號更新為6（加入收件人支援）
+      version: 7, // ✅ 版本號更新為7（加入firestoreIds支援）
       onCreate: _createDb,
       onUpgrade: _onUpgrade,
     );
@@ -62,6 +62,7 @@ class DatabaseHelper {
         tags TEXT DEFAULT '',
         receiver_id TEXT,
         receiver_name TEXT,
+        firestore_ids TEXT DEFAULT '',
         FOREIGN KEY (category_id) REFERENCES task_categories (id) ON DELETE SET NULL
       )
     ''');
@@ -148,6 +149,11 @@ class DatabaseHelper {
       await db.execute(
           'ALTER TABLE scheduled_messages ADD COLUMN receiver_name TEXT');
       print('✅ 升級至版本6：新增收件人支援');
+    }
+    if (oldVersion < 7) {
+      await db.execute(
+          'ALTER TABLE scheduled_messages ADD COLUMN firestore_ids TEXT DEFAULT ""');
+      print('✅ 升級至版本7：新增firestoreIds支援');
     }
   }
 

@@ -43,20 +43,41 @@ exports.sendScheduledMessages = functions
           const fcmToken = userDoc.data().fcmToken;
           if (!fcmToken) return;
 
-          await fcm.send({
-            token: fcmToken,
-            notification: {
-              title: `來自 ${senderName} 的訊息`,
-              body: message,
-            },
-            android: {
-              priority: "high",
-              notification: {
-                sound: "default",
-                channelId: "scheduled_channel",
+          if (data.autoPlay === true && data.voiceUrl) {
+            await fcm.send({
+              token: fcmToken,
+              data: {
+                autoPlay: 'true',
+                voiceUrl: data.voiceUrl,
+                messageType: 'voice',
+                senderName: senderName,
               },
-            },
-          });
+              android: {
+                priority: "high",
+              },
+            });
+          } else {
+            await fcm.send({
+              token: fcmToken,
+              notification: {
+                title: `來自 ${senderName} 的訊息`,
+                body: message,
+              },
+              data: {
+              autoPlay: 'false',
+              voiceUrl: data.voiceUrl || '',
+              messageType: data.messageType || 'text',
+              senderName: senderName,
+              },
+              android: {
+                priority: "high",
+                notification: {
+                  sound: "default",
+                  channelId: "scheduled_channel",
+                },
+              },
+            });
+          }
 
           await doc.ref.update({ status: "triggered" });
           console.log(`✅ 訊息已發送給 ${receiverId}`);
@@ -72,5 +93,3 @@ exports.sendScheduledMessages = functions
       return null;
     }
   });
-
-  

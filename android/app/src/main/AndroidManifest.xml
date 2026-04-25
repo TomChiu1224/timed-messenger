@@ -24,6 +24,12 @@
     <!-- ✅ 電池優化豁免權限（小米/華為/OPPO 等品牌必須）-->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
+    <!-- ✅ 語音訊息權限 -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
+
     <application
         android:label="愛傳時"
         android:name="${applicationName}"

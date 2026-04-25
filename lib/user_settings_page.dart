@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'privacy_policy_page.dart';
 import 'user_manager.dart';
 import 'firebase_service.dart';
+import 'services/tts_service.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -17,6 +20,9 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
   bool _notificationEnabled = true;
   String _themeMode = 'system';
   bool _isLoading = true;
+  String _textMessageMode = 'notify';
+  String _voiceMessageMode = 'notify';
+  bool _followSilentMode = true;
 
   // ✅ 新增欄位
   String _username = '';
@@ -48,6 +54,10 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       final username = await _userManager.getUsername();
       final phoneNumber = await _userManager.getPhoneNumber();
 
+      final textMessageMode = await TtsService.getTextMessageMode();
+      final voiceMessageMode = await TtsService.getVoiceMessageMode();
+      final followSilentMode = await TtsService.getFollowSilentMode();
+
       setState(() {
         _userProfile = profile;
         _notificationEnabled = notificationEnabled;
@@ -57,6 +67,9 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
         _usernameController.text = username;
         _phoneController.text = phoneNumber;
         _displayNameController.text = profile?.displayName ?? '';
+        _textMessageMode = textMessageMode;
+        _voiceMessageMode = voiceMessageMode;
+        _followSilentMode = followSilentMode;
         _isLoading = false;
       });
     } catch (e) {
@@ -302,6 +315,50 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                   ),
                   const SizedBox(height: 24),
 
+                  // 訊息接收偏好
+                  _buildSectionTitle('訊息接收偏好'),
+                  Card(
+                    elevation: 2,
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.text_fields,
+                              color: Colors.purple.shade600),
+                          title: const Text('文字訊息收到時'),
+                          subtitle:
+                              Text(_getTextModeDisplayName(_textMessageMode)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _showTextMessageModeDialog,
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading:
+                              Icon(Icons.mic, color: Colors.purple.shade600),
+                          title: const Text('語音訊息收到時'),
+                          subtitle:
+                              Text(_getVoiceModeDisplayName(_voiceMessageMode)),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: _showVoiceMessageModeDialog,
+                        ),
+                        const Divider(height: 1),
+                        SwitchListTile(
+                          secondary: Icon(Icons.volume_off,
+                              color: Colors.purple.shade600),
+                          title: const Text('跟隨手機靜音設定'),
+                          subtitle: const Text('手機靜音時自動變靜音'),
+                          value: _followSilentMode,
+                          onChanged: (val) async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('follow_silent_mode', val);
+                            setState(() => _followSilentMode = val);
+                          },
+                          activeColor: Colors.purple.shade600,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
                   // 帳號管理
                   if (_firebaseService.isSignedIn) ...[
                     _buildSectionTitle('帳號管理'),
@@ -336,6 +393,21 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                           title: const Text('應用程式版本'),
                           subtitle: const Text('1.4.0'),
                           onTap: () {},
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: Icon(Icons.privacy_tip,
+                              color: Colors.purple.shade600),
+                          title: const Text('隱私權政策'),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PrivacyPolicyPage(),
+                              ),
+                            );
+                          },
                         ),
                       ],
                     ),
@@ -450,6 +522,82 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
               onChanged: (value) {
                 Navigator.pop(context);
                 if (value != null) _updateThemeSetting(value);
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  String _getTextModeDisplayName(String mode) {
+    switch (mode) {
+      case 'tts':
+        return '🗣️ 朗讀模式';
+      case 'silent':
+        return '🔇 靜音模式';
+      default:
+        return '🔔 通知模式';
+    }
+  }
+
+  String _getVoiceModeDisplayName(String mode) {
+    switch (mode) {
+      case 'autoplay':
+        return '🎙️ 自動播放模式';
+      case 'silent':
+        return '🔇 靜音模式';
+      default:
+        return '🔔 通知模式';
+    }
+  }
+
+  void _showTextMessageModeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('文字訊息收到時'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['notify', 'tts', 'silent'].map((mode) {
+            return RadioListTile<String>(
+              title: Text(_getTextModeDisplayName(mode)),
+              value: mode,
+              groupValue: _textMessageMode,
+              onChanged: (value) async {
+                Navigator.pop(context);
+                if (value != null) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('text_message_mode', value);
+                  setState(() => _textMessageMode = value);
+                }
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showVoiceMessageModeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('語音訊息收到時'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: ['notify', 'autoplay', 'silent'].map((mode) {
+            return RadioListTile<String>(
+              title: Text(_getVoiceModeDisplayName(mode)),
+              value: mode,
+              groupValue: _voiceMessageMode,
+              onChanged: (value) async {
+                Navigator.pop(context);
+                if (value != null) {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setString('voice_message_mode', value);
+                  setState(() => _voiceMessageMode = value);
+                }
               },
             );
           }).toList(),

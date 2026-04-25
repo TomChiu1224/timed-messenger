@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart'; // ✅ 新增
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart'; // ✅ FCM 推播通知
 import 'firebase_service.dart';
+import 'voice_message_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'services/fcm_service.dart'; // ✅ FCM 服務
 import 'modules/auth/views/login_page.dart';
@@ -88,25 +89,23 @@ void main() async {
     }
   }
 
-  // ✅ 初始化訂閱服務
-  try {
-    await SubscriptionService().initialize();
-    debugPrint('✅ 訂閱服務初始化完成');
-  } catch (e) {
-    debugPrint('⚠️ 訂閱服務初始化失敗: $e');
-  }
-
   // ✅ Firebase 相關初始化（僅限 Android/iOS）
   FirebaseService? firebaseService;
   if (Platform.isAndroid || Platform.isIOS) {
     try {
-      // 註冊 Firebase 背景訊息處理器（必須在 runApp 之前）
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
       await Firebase.initializeApp();
       firebaseService = FirebaseService();
       await firebaseService.initialize();
       debugPrint('✅ Firebase 初始化完成');
+
+      // ✅ 初始化訂閱服務（必須在 Firebase 之後）
+      try {
+        await SubscriptionService().initialize();
+        debugPrint('✅ 訂閱服務初始化完成');
+      } catch (e) {
+        debugPrint('⚠️ 訂閱服務初始化失敗: $e');
+      }
 
       // ✅ 初始化 FCM 推播通知服務
       await fcmService.initialize();
@@ -159,18 +158,7 @@ class MyApp extends StatelessWidget {
             ),
             child: child!,
           ),
-          home: firebaseService != null
-              ? StreamBuilder(
-                  stream: FirebaseAuth.instance.authStateChanges(),
-                  builder: (context, snapshot) {
-                    // ✅ 修正：明確判斷 data 不為 null 才跳轉
-                    if (snapshot.hasData && snapshot.data != null) {
-                      return HomePage(themeManager: themeManager);
-                    }
-                    return const LoginPage();
-                  },
-                )
-              : HomePage(themeManager: themeManager), // 桌面平台直接顯示主頁（無需登入）
+          home: const SplashScreen(),
         );
       },
     );
@@ -197,6 +185,12 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _selectedReceivers = [];
   int _unreadCount = 0;
   bool _showAdvancedSettings = false;
+  // ========== 語音訊息變數 ==========
+  bool _isVoiceMode = false;
+  bool _isRecording = false;
+  bool _isPlayingPreview = false;
+  String? _voiceFilePath;
+  bool _autoPlay = false;
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -237,6 +231,8 @@ class _HomePageState extends State<HomePage> {
   DateTime _lastResetDate = DateTime.now();
   bool _isFirstLoad = true; // ✅ 新增：標記是否為首次載入
   int _currentTabIndex = 0; // ✅ 新增：目前在哪個Tab
+  Timer? _badgeTimer; // ✅ 未讀數量更新 Timer
+  Timer? _mainTimer; // ✅ 排程檢查 Timer
 
   // ✅ 新增：分類相關變數
   int? _selectedCategoryId;
@@ -262,7 +258,7 @@ class _HomePageState extends State<HomePage> {
     _loadUnreadCount();
 
     // ✅ 每30秒自動更新未讀數量
-    Timer.periodic(const Duration(seconds: 30), (_) {
+    _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) _loadUnreadCount();
     });
     _loadCategories();
@@ -1278,7 +1274,7 @@ class _HomePageState extends State<HomePage> {
 
   void _addMessage() async {
     // ✅ 驗證訊息內容
-    if (_messageController.text.trim().isEmpty) {
+    if (!_isVoiceMode && _messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ 請輸入任務內容'),
@@ -1360,7 +1356,38 @@ class _HomePageState extends State<HomePage> {
 
       // ✅ 如果有選擇收件人，同步儲存到 Firestore
       if (_selectedReceivers.isNotEmpty) {
-        final success = await _firebaseService.saveScheduledMessageToMultiple(
+        // 語音訊息處理
+        if (_isVoiceMode && _voiceFilePath != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('⏫ 上傳語音中...')),
+          );
+          final voiceUrl =
+              await VoiceMessageService.uploadVoice(_voiceFilePath!);
+          if (voiceUrl == null) {
+            if (mounted)
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('❌ 語音上傳失敗'), backgroundColor: Colors.red));
+            return;
+          }
+          await _firebaseService.saveVoiceMessageToMultiple(
+            messageData: {
+              'message': '🎙️ 語音訊息',
+              'scheduledTime': newMsg.time.millisecondsSinceEpoch,
+              'targetTimeZone': newMsg.targetTimeZone
+            },
+            receivers: _selectedReceivers,
+            voiceUrl: voiceUrl,
+            voiceDurationSeconds: 0,
+            autoPlay: _autoPlay,
+          );
+          if (mounted)
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('✅ 語音已排程傳送給 ${_selectedReceivers.length} 位')));
+          setState(() => _selectedReceivers = []);
+          _resetForm();
+          return;
+        }
+        final docIds = await _firebaseService.saveScheduledMessageToMultiple(
           messageData: {
             'message': newMsg.message,
             'scheduledTime': newMsg.time.millisecondsSinceEpoch,
@@ -1368,7 +1395,17 @@ class _HomePageState extends State<HomePage> {
           },
           receivers: _selectedReceivers,
         );
-        if (success && mounted) {
+        if (docIds.isNotEmpty && newMsg.id != null) {
+          newMsg.firestoreIds = docIds;
+          try {
+            final dbHelper = DatabaseHelper();
+            await dbHelper.updateMessage(newMsg.id!, newMsg.toMap());
+            debugPrint('✅ firestoreIds 已存回 SQLite: $docIds');
+          } catch (e) {
+            debugPrint('❌ 儲存 firestoreIds 失敗: $e');
+          }
+        }
+        if (docIds.isNotEmpty && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('📨 已排程傳送給 ${_selectedReceivers.length} 位收件人'),
@@ -1380,13 +1417,23 @@ class _HomePageState extends State<HomePage> {
           });
         }
       } else if (_selectedReceiverId != null) {
-        await FirebaseService().saveScheduledMessage({
+        final docId = await FirebaseService().saveScheduledMessage({
           'receiverId': _selectedReceiverId,
           'receiverName': _selectedReceiverName,
           'message': newMsg.message,
           'scheduledTime': newMsg.time.millisecondsSinceEpoch,
           'targetTimeZone': newMsg.targetTimeZone,
         });
+        if (docId != null && newMsg.id != null) {
+          newMsg.firestoreIds = [docId];
+          try {
+            final dbHelper = DatabaseHelper();
+            await dbHelper.updateMessage(newMsg.id!, newMsg.toMap());
+            debugPrint('✅ firestoreId 已存回 SQLite: $docId');
+          } catch (e) {
+            debugPrint('❌ 儲存 firestoreId 失敗: $e');
+          }
+        }
       }
     } catch (e) {
       debugPrint('❌ 儲存到資料庫失敗: $e');
@@ -1456,6 +1503,95 @@ class _HomePageState extends State<HomePage> {
         debugPrint('⚠️ 設定背景通知失敗: $e');
       }
     }
+  }
+
+  /// ✅ 語音錄製 UI
+  Widget _buildVoiceRecorder() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.purple),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  if (_isRecording) {
+                    final path = await VoiceMessageService.stopRecording();
+                    setState(() {
+                      _isRecording = false;
+                      _voiceFilePath = path;
+                    });
+                  } else {
+                    final ok = await VoiceMessageService.startRecording();
+                    if (ok) setState(() => _isRecording = true);
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 32,
+                  backgroundColor: _isRecording ? Colors.red : Colors.purple,
+                  child: Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isRecording
+                ? '錄音中... 點擊停止'
+                : _voiceFilePath == null
+                    ? '點擊開始錄音'
+                    : '✅ 錄音完成',
+            style: TextStyle(color: _isRecording ? Colors.red : Colors.grey),
+          ),
+          if (_voiceFilePath != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (_isPlayingPreview) {
+                      await VoiceMessageService.stopPlaying();
+                      setState(() => _isPlayingPreview = false);
+                    } else {
+                      await VoiceMessageService.playLocalAudio(_voiceFilePath!);
+                      setState(() => _isPlayingPreview = true);
+                    }
+                  },
+                  icon: Icon(_isPlayingPreview ? Icons.stop : Icons.play_arrow),
+                  label: Text(_isPlayingPreview ? '停止試聽' : '試聽'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _voiceFilePath = null;
+                    _isPlayingPreview = false;
+                  }),
+                  child: const Text('重錄', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              title: const Text('自動播放（對方收到後直接播放）'),
+              subtitle: const Text('適合提醒長輩吃藥等場景'),
+              value: _autoPlay,
+              onChanged: (v) => setState(() => _autoPlay = v),
+              activeColor: Colors.purple,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// ✅ 重設表單（加入時區重設和音效重設）
@@ -1529,6 +1665,8 @@ class _HomePageState extends State<HomePage> {
   void _editMessage(int index) {
     final msg = _scheduledMessages[index];
     final controller = TextEditingController(text: msg.message);
+    final DateTime oldTime = msg.time;
+    final String oldMessage = msg.message;
     DateTime newTime = msg.time;
     String repeat = msg.repeatType;
     List<int> days = List.from(msg.repeatDays);
@@ -2245,7 +2383,9 @@ class _HomePageState extends State<HomePage> {
                 //   // flutterLocalNotificationsPlugin.cancel(baseId);
                 // }
 
-                // ✅ 更新物件屬性（包含完整功能）
+                /// ✅ 更新物件屬性（包含完整功能)
+                final oldTime = msg.time; // 先保存舊時間
+                final oldMessage = msg.message; // 先保存舊訊息
                 msg.message = controller.text;
                 msg.time = newTime;
                 msg.repeatType = repeat;
@@ -2292,6 +2432,27 @@ class _HomePageState extends State<HomePage> {
                   } catch (e) {
                     debugPrint('❌ 更新資料庫失敗: $e');
                   }
+                }
+
+                // ✅ 用 firestoreIds 直接更新 Firestore
+                if (msg.firestoreIds.isNotEmpty) {
+                  try {
+                    for (final docId in msg.firestoreIds) {
+                      await FirebaseFirestore.instance
+                          .collection('scheduled_messages')
+                          .doc(docId)
+                          .update({
+                        'status': 'scheduled',
+                        'scheduledTime': newTime.millisecondsSinceEpoch,
+                        'message': controller.text,
+                      });
+                      debugPrint('✅ Firestore 已直接更新 docId: $docId');
+                    }
+                  } catch (e) {
+                    debugPrint('❌ Firestore 更新失敗: $e');
+                  }
+                } else {
+                  debugPrint('⚠️ firestoreIds 為空，無法更新 Firestore');
                 }
 
                 setState(() {
@@ -2771,14 +2932,37 @@ class _HomePageState extends State<HomePage> {
                                 fontSize: 18, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
 
-                        // 訊息內容輸入
-                        TextField(
-                          controller: _messageController,
-                          decoration: const InputDecoration(
-                            labelText: '請輸入訊息內容',
-                            border: OutlineInputBorder(),
-                          ),
+                        // 訊息類型切換
+                        Row(
+                          children: [
+                            const Text('訊息類型：'),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: const Text('文字'),
+                              selected: !_isVoiceMode,
+                              onSelected: (_) =>
+                                  setState(() => _isVoiceMode = false),
+                            ),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: const Text('🎙️ 語音'),
+                              selected: _isVoiceMode,
+                              onSelected: (_) =>
+                                  setState(() => _isVoiceMode = true),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 8),
+                        if (!_isVoiceMode)
+                          TextField(
+                            controller: _messageController,
+                            decoration: const InputDecoration(
+                              labelText: '請輸入訊息內容',
+                              border: OutlineInputBorder(),
+                            ),
+                          )
+                        else
+                          _buildVoiceRecorder(),
                         const SizedBox(height: 8),
 
                         // 時間選擇
@@ -3855,8 +4039,81 @@ class _HomePageState extends State<HomePage> {
   /// ✅ 顯示標籤選擇對話框
 }
 
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
 
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 2000), () {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StreamBuilder(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData && snapshot.data != null) {
+                return HomePage(themeManager: ThemeManager());
+              }
+              return const LoginPage();
+            },
+          ),
+        ),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF7B2FBE), Color(0xFFC45BCB)],
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/icons/splash_icon.png',
+              width: 120,
+              height: 120,
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              '愛傳時',
+              style: TextStyle(
+                fontSize: 36,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                letterSpacing: 6,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              '定時傳訊，情意不漏',
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.white70,
+                letterSpacing: 3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 // ========== 程式結束 ==========
-
-

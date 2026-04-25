@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'voice_message_service.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -141,28 +142,65 @@ class _InboxPageState extends State<InboxPage>
     }
 
     if (!mounted) return;
+
+    final isVoice = msg['messageType'] == 'voice';
+    final voiceUrl = msg['voiceUrl'] as String?;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('來自 ${msg['senderName'] ?? '未知用戶'}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(msg['message'] ?? '（無內容）',
-                style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            Text('排程時間：${_formatTime(msg['scheduledTime'])}',
-                style: const TextStyle(color: Colors.grey, fontSize: 13)),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('關閉'),
+      builder: (context) {
+        bool _isPlaying = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('來自 ${msg['senderName'] ?? '未知用戶'}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isVoice && voiceUrl != null) ...[
+                  const Text('🎙️ 語音訊息', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: ElevatedButton.icon(
+                      icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
+                      label: Text(_isPlaying ? '停止播放' : '播放語音'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        if (_isPlaying) {
+                          await VoiceMessageService.stopPlaying();
+                          setDialogState(() => _isPlaying = false);
+                        } else {
+                          setDialogState(() => _isPlaying = true);
+                          await VoiceMessageService.playRemoteAudio(voiceUrl);
+                          setDialogState(() => _isPlaying = false);
+                        }
+                      },
+                    ),
+                  ),
+                ] else ...[
+                  Text(msg['message'] ?? '（無內容）',
+                      style: const TextStyle(fontSize: 16)),
+                ],
+                const SizedBox(height: 12),
+                Text('排程時間：${_formatTime(msg['scheduledTime'])}',
+                    style: const TextStyle(color: Colors.grey, fontSize: 13)),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  VoiceMessageService.stopPlaying();
+                  Navigator.pop(context);
+                },
+                child: const Text('關閉'),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -45,6 +45,7 @@ class ScheduledMessage {
   // ✅ 收件人欄位
   String? receiverId; // 收件人的 Firebase UID
   String? receiverName; // 收件人的顯示名稱
+  List<String> firestoreIds; // ✅ 對應的 Firestore 文件 ID 清單
 
   ScheduledMessage(
     this.message,
@@ -82,6 +83,7 @@ class ScheduledMessage {
     this.tags = const [],
     this.receiverId,
     this.receiverName,
+    this.firestoreIds = const [],
   });
 
   // ========== ✅ SQLite 序列化方法 - 分類+音效+震動整合版本 ==========
@@ -123,6 +125,7 @@ class ScheduledMessage {
       'tags': tags.join(','),
       'receiver_id': receiverId,
       'receiver_name': receiverName,
+      'firestore_ids': firestoreIds.join(','),
     };
 
     // 只有在更新時才包含ID
@@ -195,6 +198,7 @@ class ScheduledMessage {
       tags: parseStringList(map['tags']),
       receiverId: map['receiver_id'],
       receiverName: map['receiver_name'],
+      firestoreIds: parseStringList(map['firestore_ids']),
     );
   }
 
@@ -263,6 +267,7 @@ class ScheduledMessage {
     List<String>? tags,
     String? receiverId,
     String? receiverName,
+    List<String>? firestoreIds,
   }) {
     return ScheduledMessage(
       message ?? this.message,
@@ -296,6 +301,7 @@ class ScheduledMessage {
       tags: tags ?? this.tags,
       receiverId: receiverId ?? this.receiverId,
       receiverName: receiverName ?? this.receiverName,
+      firestoreIds: firestoreIds ?? this.firestoreIds,
     );
   }
 

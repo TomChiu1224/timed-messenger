@@ -390,23 +390,25 @@ class FirebaseService {
     }
   }
 
-  Future<bool> saveScheduledMessage(Map<String, dynamic> messageData) async {
+  Future<String?> saveScheduledMessage(Map<String, dynamic> messageData) async {
     try {
       final uid = getUserId();
-      if (uid == null) return false;
+      if (uid == null) return null;
       final user = _auth.currentUser;
-      await FirebaseFirestore.instance.collection('scheduled_messages').add({
+      final docRef = await FirebaseFirestore.instance
+          .collection('scheduled_messages')
+          .add({
         ...messageData,
         'senderId': uid,
         'senderName': user?.displayName ?? user?.email ?? '未知用戶',
         'status': 'scheduled',
         'createdAt': FieldValue.serverTimestamp(),
       });
-      print('✅ 訊息已儲存到 Firestore');
-      return true;
+      print('✅ 訊息已儲存到 Firestore，ID: ${docRef.id}');
+      return docRef.id;
     } catch (e) {
       print('❌ 儲存訊息失敗: $e');
-      return false;
+      return null;
     }
   }
 
@@ -460,9 +462,47 @@ class FirebaseService {
   }
 
   /// ✅ 群發訊息給多個收件人
-  Future<bool> saveScheduledMessageToMultiple({
+  Future<List<String>> saveScheduledMessageToMultiple({
     required Map<String, dynamic> messageData,
     required List<Map<String, dynamic>> receivers,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      final uid = user?.uid;
+      if (uid == null) return [];
+      final batch = FirebaseFirestore.instance.batch();
+      final List<String> docIds = [];
+      for (final receiver in receivers) {
+        final docRef =
+            FirebaseFirestore.instance.collection('scheduled_messages').doc();
+        docIds.add(docRef.id);
+        batch.set(docRef, {
+          ...messageData,
+          'senderId': uid,
+          'senderName': user?.displayName ?? user?.email ?? '未知用戶',
+          'receiverId': receiver['uid'],
+          'receiverName':
+              receiver['displayName'] ?? receiver['username'] ?? '未知',
+          'status': 'scheduled',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+      print('✅ 群發訊息已儲存，共 ${receivers.length} 位收件人');
+      return docIds;
+    } catch (e) {
+      print('❌ 群發失敗：$e');
+      return [];
+    }
+  }
+
+  /// ✅ 儲存語音訊息給多個收件人
+  Future<bool> saveVoiceMessageToMultiple({
+    required Map<String, dynamic> messageData,
+    required List<Map<String, dynamic>> receivers,
+    required String voiceUrl,
+    required int voiceDurationSeconds,
+    required bool autoPlay,
   }) async {
     try {
       final user = _auth.currentUser;
@@ -480,14 +520,18 @@ class FirebaseService {
           'receiverName':
               receiver['displayName'] ?? receiver['username'] ?? '未知',
           'status': 'scheduled',
+          'messageType': 'voice',
+          'voiceUrl': voiceUrl,
+          'voiceDurationSeconds': voiceDurationSeconds,
+          'autoPlay': autoPlay,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
       await batch.commit();
-      print('✅ 群發訊息已儲存，共 ${receivers.length} 位收件人');
+      print('✅ 語音訊息已儲存，共 ${receivers.length} 位收件人');
       return true;
     } catch (e) {
-      print('❌ 群發失敗：$e');
+      print('❌ 語音訊息儲存失敗：$e');
       return false;
     }
   }

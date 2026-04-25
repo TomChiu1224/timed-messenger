@@ -5,6 +5,7 @@ import 'models/scheduled_message.dart';
 import 'services/theme_manager.dart';
 import 'app_timezones.dart';
 import 'firebase_service.dart';
+import 'voice_message_service.dart';
 
 class ScheduleFormWidget extends StatefulWidget {
   final ThemeManager themeManager;
@@ -43,6 +44,98 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
     } catch (e) {
       setState(() => _loadingFriends = false);
     }
+  }
+
+  /// ✅ 語音錄製 UI
+  Widget _buildVoiceRecorder() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.purple),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          // 錄音按鈕
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () async {
+                  if (_isRecording) {
+                    final path = await VoiceMessageService.stopRecording();
+                    setState(() {
+                      _isRecording = false;
+                      _voiceFilePath = path;
+                    });
+                  } else {
+                    final ok = await VoiceMessageService.startRecording();
+                    if (ok) setState(() => _isRecording = true);
+                  }
+                },
+                child: CircleAvatar(
+                  radius: 32,
+                  backgroundColor: _isRecording ? Colors.red : Colors.purple,
+                  child: Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isRecording
+                ? '錄音中... 點擊停止'
+                : _voiceFilePath == null
+                    ? '點擊開始錄音'
+                    : '✅ 錄音完成',
+            style: TextStyle(color: _isRecording ? Colors.red : Colors.grey),
+          ),
+          // 試聽按鈕
+          if (_voiceFilePath != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    if (_isPlayingPreview) {
+                      await VoiceMessageService.stopPlaying();
+                      setState(() => _isPlayingPreview = false);
+                    } else {
+                      await VoiceMessageService.playLocalAudio(_voiceFilePath!);
+                      setState(() => _isPlayingPreview = true);
+                    }
+                  },
+                  icon: Icon(_isPlayingPreview ? Icons.stop : Icons.play_arrow),
+                  label: Text(_isPlayingPreview ? '停止試聽' : '試聽'),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () => setState(() {
+                    _voiceFilePath = null;
+                    _isPlayingPreview = false;
+                  }),
+                  child: const Text('重錄', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // 自動播放開關
+            SwitchListTile(
+              title: const Text('自動播放（對方收到後直接播放）'),
+              subtitle: const Text('適合提醒長輩吃藥等場景'),
+              value: _autoPlay,
+              onChanged: (v) => setState(() => _autoPlay = v),
+              activeColor: Colors.purple,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   void _resetForm() {
@@ -118,6 +211,14 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
   String _selectedSoundId = 'notification';
   double _soundVolume = 0.8;
   int _soundRepeat = 1;
+
+  // ========== 語音訊息變數 ==========
+  bool _isVoiceMode = false;
+  bool _isRecording = false;
+  bool _isPlayingPreview = false;
+  String? _voiceFilePath;
+  int _voiceDuration = 0;
+  bool _autoPlay = false;
 
   int? _selectedCategoryId;
   final List<String> _selectedTags = [];
@@ -433,13 +534,35 @@ class _ScheduleFormWidgetState extends State<ScheduleFormWidget> {
               const Text('新增排程',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              TextField(
-                controller: _messageController,
-                decoration: const InputDecoration(
-                  labelText: '請輸入訊息內容',
-                  border: OutlineInputBorder(),
-                ),
+              // ========== 訊息類型切換 ==========
+              Row(
+                children: [
+                  const Text('訊息類型：'),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('文字'),
+                    selected: !_isVoiceMode,
+                    onSelected: (_) => setState(() => _isVoiceMode = false),
+                  ),
+                  const SizedBox(width: 8),
+                  ChoiceChip(
+                    label: const Text('🎙️ 語音'),
+                    selected: _isVoiceMode,
+                    onSelected: (_) => setState(() => _isVoiceMode = true),
+                  ),
+                ],
               ),
+              const SizedBox(height: 12),
+              if (!_isVoiceMode)
+                TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(
+                    labelText: '請輸入訊息內容',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              else
+                _buildVoiceRecorder(),
               const SizedBox(height: 16),
               Row(
                 children: [

@@ -11,6 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'notification_manager.dart';
 import 'audio_manager.dart';
 import 'vibration_manager.dart';
+import '../voice_message_service.dart';
+import 'tts_service.dart';
 
 /// 🔔 FCM 推播通知服務管理類別
 class FCMService {
@@ -120,7 +122,8 @@ class FCMService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('fcm_token', token);
-      await prefs.setString('fcm_token_updated_at', DateTime.now().toIso8601String());
+      await prefs.setString(
+          'fcm_token_updated_at', DateTime.now().toIso8601String());
       print('✅ FCM Token 已儲存');
     } catch (e) {
       print('❌ 儲存 FCM Token 失敗: $e');
@@ -150,6 +153,48 @@ class FCMService {
     print('   標題: ${message.notification?.title}');
     print('   內容: ${message.notification?.body}');
     print('   資料: ${message.data}');
+
+    // 🎙️ 判斷是否為語音訊息且需要自動播放
+    final autoPlay = message.data['autoPlay'] == 'true';
+    final voiceUrl = message.data['voiceUrl'] as String?;
+    final messageType = message.data['messageType'] ?? 'text';
+    final senderName =
+        message.data['senderName'] ?? message.notification?.title ?? '未知用戶';
+    final messageText = message.notification?.body ?? '';
+
+    // 檢查是否跟隨手機靜音
+    final followSilent = await TtsService.getFollowSilentMode();
+
+    if (messageType == 'voice' &&
+        autoPlay &&
+        voiceUrl != null &&
+        voiceUrl.isNotEmpty) {
+      final voiceMode = await TtsService.getVoiceMessageMode();
+      if (voiceMode == 'autoplay') {
+        print('🎙️ 自動播放語音訊息...');
+        try {
+          await VoiceMessageService.playRemoteAudio(voiceUrl);
+          print('✅ 自動播放成功');
+        } catch (e) {
+          print('⚠️ 自動播放失敗: $e');
+        }
+        return;
+      }
+    } else if (messageType == 'text') {
+      final textMode = await TtsService.getTextMessageMode();
+      if (textMode == 'tts' && messageText.isNotEmpty) {
+        print('🗣️ TTS 朗讀訊息...');
+        try {
+          await TtsService.speak('$senderName 說：$messageText');
+          return;
+        } catch (e) {
+          print('⚠️ TTS 朗讀失敗: $e');
+        }
+      } else if (textMode == 'silent') {
+        print('🔇 靜音模式，不播放');
+        return;
+      }
+    }
 
     // 播放音效（使用預設通知音）
     try {
@@ -265,11 +310,35 @@ class FCMService {
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   print('🔔 背景訊息處理: ${message.messageId}');
-  print('   標題: ${message.notification?.title}');
-  print('   內容: ${message.notification?.body}');
+  print('   資料: ${message.data}');
 
-  // 注意：這裡不能使用 UI 相關的操作
-  // 只能進行數據處理、本地儲存等操作
+  final autoPlay = message.data['autoPlay'] == 'true';
+  final voiceUrl = message.data['voiceUrl'] as String?;
+  final messageType = message.data['messageType'] ?? 'text';
+  final senderName = message.data['senderName'] ?? '未知用戶';
+  final messageText = message.notification?.body ?? '';
+
+  if (autoPlay && voiceUrl != null && voiceUrl.isNotEmpty) {
+    print('🎙️ 背景自動播放語音訊息...');
+    try {
+      await VoiceMessageService.playRemoteAudio(voiceUrl);
+      print('✅ 背景自動播放成功');
+    } catch (e) {
+      print('⚠️ 背景自動播放失敗: $e');
+    }
+  } else if (messageType == 'text' && messageText.isNotEmpty) {
+    final prefs = await SharedPreferences.getInstance();
+    final textMode = prefs.getString('text_message_mode') ?? 'notify';
+    if (textMode == 'tts') {
+      print('🗣️ 背景 TTS 朗讀訊息...');
+      try {
+        await TtsService.speak('$senderName 說：$messageText');
+        print('✅ 背景 TTS 成功');
+      } catch (e) {
+        print('⚠️ 背景 TTS 失敗: $e');
+      }
+    }
+  }
 }
 
 /// 全域 FCM 服務實例

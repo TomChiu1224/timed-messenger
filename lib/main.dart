@@ -17,7 +17,7 @@ import 'modules/auth/services/auth_service.dart';
 import 'package:timed_messenger/modules/messaging/services/messaging_service.dart'; // ← 改成完整路徑
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -56,6 +56,7 @@ import 'services/theme_manager.dart';
 import 'subscription_page.dart'; // ✅ 訂閱頁面
 import 'services/subscription_service.dart'; // ✅ 訂閱服務
 import 'services/quota_service.dart'; // ✅ 額度管理
+import 'services/image_message_service.dart'; // ✅ 圖片訊息
 
 // 初始化通知插件
 // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -192,6 +193,10 @@ class _HomePageState extends State<HomePage> {
   bool _isPlayingPreview = false;
   String? _voiceFilePath;
   bool _autoPlay = false;
+  // ✅ 圖片訊息變數
+  bool _isImageMode = false;
+  File? _selectedImageFile;
+  String? _selectedImageUrl;
   final TextEditingController _messageController = TextEditingController();
   DateTime? _selectedDateTime;
   String _repeatType = 'none';
@@ -1275,7 +1280,9 @@ class _HomePageState extends State<HomePage> {
 
   void _addMessage() async {
     // ✅ 驗證訊息內容
-    if (!_isVoiceMode && _messageController.text.trim().isEmpty) {
+    if (!_isVoiceMode &&
+        !_isImageMode &&
+        _messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('⚠️ 請輸入任務內容'),
@@ -1540,6 +1547,61 @@ class _HomePageState extends State<HomePage> {
         debugPrint('⚠️ 設定背景通知失敗: $e');
       }
     }
+  }
+
+  /// ✅ 圖片選擇 UI
+  Widget _buildImagePicker() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.blue),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          if (_selectedImageFile != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.file(
+                _selectedImageFile!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _selectedImageFile = null;
+                _selectedImageUrl = null;
+              }),
+              icon: const Icon(Icons.close, color: Colors.red),
+              label: const Text('移除圖片', style: TextStyle(color: Colors.red)),
+            ),
+          ] else ...[
+            const Icon(Icons.image, size: 48, color: Colors.blue),
+            const SizedBox(height: 8),
+            const Text('尚未選擇圖片'),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final file =
+                    await ImageMessageService.showImageSourceDialog(context);
+                if (file != null) {
+                  setState(() => _selectedImageFile = file);
+                }
+              },
+              icon: const Icon(Icons.add_photo_alternate),
+              label: const Text('選擇圖片'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// ✅ 語音錄製 UI
@@ -2970,34 +3032,52 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 8),
 
                         // 訊息類型切換
-                        Row(
-                          children: [
-                            const Text('訊息類型：'),
-                            const SizedBox(width: 8),
-                            ChoiceChip(
-                              label: const Text('文字'),
-                              selected: !_isVoiceMode,
-                              onSelected: (_) =>
-                                  setState(() => _isVoiceMode = false),
-                            ),
-                            const SizedBox(width: 8),
-                            ChoiceChip(
-                              label: const Text('🎙️ 語音'),
-                              selected: _isVoiceMode,
-                              onSelected: (_) =>
-                                  setState(() => _isVoiceMode = true),
-                            ),
-                          ],
-                        ),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              const Text('訊息類型：'),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('文字'),
+                                selected: !_isVoiceMode,
+                                onSelected: (_) => setState(() {
+                                  _isVoiceMode = false;
+                                  _isImageMode = false;
+                                }),
+                              ), // ChoiceChip
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('🎙️ 語音'),
+                                selected: _isVoiceMode,
+                                onSelected: (_) => setState(() {
+                                  _isVoiceMode = true;
+                                  _isImageMode = false;
+                                }),
+                              ), // ChoiceChip
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('🖼️ 圖片'),
+                                selected: _isImageMode,
+                                onSelected: (_) => setState(() {
+                                  _isImageMode = true;
+                                  _isVoiceMode = false;
+                                }),
+                              ), // ChoiceChip
+                            ],
+                          ), // Row
+                        ), // SingleChildScrollView
                         const SizedBox(height: 8),
-                        if (!_isVoiceMode)
+                        if (_isImageMode)
+                          _buildImagePicker()
+                        else if (!_isVoiceMode)
                           TextField(
                             controller: _messageController,
                             decoration: const InputDecoration(
                               labelText: '請輸入訊息內容',
                               border: OutlineInputBorder(),
-                            ),
-                          )
+                            ), // InputDecoration
+                          ) // TextField
                         else
                           _buildVoiceRecorder(),
                         const SizedBox(height: 8),

@@ -55,6 +55,7 @@ import 'import_export_page.dart';
 import 'services/theme_manager.dart';
 import 'subscription_page.dart'; // ✅ 訂閱頁面
 import 'services/subscription_service.dart'; // ✅ 訂閱服務
+import 'services/quota_service.dart'; // ✅ 額度管理
 
 // 初始化通知插件
 // final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -1354,6 +1355,40 @@ class _HomePageState extends State<HomePage> {
       debugPrint('✅ 排程已儲存到資料庫，ID: $insertedId，音效: ${newMsg.soundPath}');
       MessagingService.addMessage(newMsg.toMap()); // ← 新增：同
 
+      // ✅ 額度檢查
+      final quotaInfo = await QuotaService.getQuotaInfo();
+      final totalReceivers = _selectedReceivers.isNotEmpty
+          ? _selectedReceivers.length
+          : (_selectedReceiverId != null ? 1 : 0);
+      if (!quotaInfo['canSend'] || quotaInfo['remaining'] < totalReceivers) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Row(children: [
+                Icon(Icons.warning, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('今日額度已用完'),
+              ]),
+              content: Text(
+                '您今日已發送 ${quotaInfo['usage']}/${quotaInfo['limit']} 則訊息。\n\n'
+                '升級訂閱方案可獲得更多額度：\n'
+                '• Lite：每日20則\n'
+                '• Plus：每日50則\n'
+                '• Pro：每日80則',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('確定'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
       // ✅ 如果有選擇收件人，同步儲存到 Firestore
       if (_selectedReceivers.isNotEmpty) {
         // 語音訊息處理
@@ -1412,6 +1447,7 @@ class _HomePageState extends State<HomePage> {
               backgroundColor: Colors.blue,
             ),
           );
+          await QuotaService.incrementUsage();
           setState(() {
             _selectedReceivers = [];
           });
@@ -1434,6 +1470,7 @@ class _HomePageState extends State<HomePage> {
             debugPrint('❌ 儲存 firestoreId 失敗: $e');
           }
         }
+        await QuotaService.incrementUsage();
       }
     } catch (e) {
       debugPrint('❌ 儲存到資料庫失敗: $e');

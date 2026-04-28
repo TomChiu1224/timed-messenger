@@ -1429,6 +1429,66 @@ class _HomePageState extends State<HomePage> {
           _resetForm();
           return;
         }
+        // 圖片訊息處理
+        if (_isImageMode && _selectedImageFile != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🖼️ 上傳圖片中...')),
+          );
+          final imageUrl =
+              await ImageMessageService.uploadImage(_selectedImageFile!);
+          if (imageUrl == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('❌ 圖片上傳失敗'),
+                backgroundColor: Colors.red,
+              ));
+            }
+            return;
+          }
+          await _firebaseService.saveScheduledMessageToMultiple(
+            messageData: {
+              'message': '🖼️ 圖片訊息',
+              'scheduledTime': newMsg.time.millisecondsSinceEpoch,
+              'targetTimeZone': newMsg.targetTimeZone,
+              'messageType': 'image',
+              'imageUrl': imageUrl,
+            },
+            receivers: _selectedReceivers,
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('✅ 圖片已排程傳給 ${_selectedReceivers.length} 位'),
+              backgroundColor: Colors.blue,
+            ));
+          }
+          await QuotaService.incrementUsage();
+          final bool isMobile =
+              !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+          if (isMobile && newMsg.id != null) {
+            try {
+              await notificationManager.scheduleNotification(
+                id: newMsg.id!,
+                title: '🔔 愛傳時提醒',
+                body: '🖼️ 圖片訊息',
+                scheduledTime: newMsg.time,
+                soundType:
+                    newMsg.soundEnabled ? newMsg.soundPath : 'notification',
+                vibrationEnabled: newMsg.vibrationEnabled,
+                vibrationPattern: VibrationManager.getVibrationPatternById(
+                            newMsg.vibrationPattern)
+                        ?.pattern ??
+                    [0, 300, 100, 300],
+                vibrationRepeat: newMsg.vibrationRepeat,
+                soundRepeat: newMsg.soundRepeat,
+              );
+            } catch (e) {
+              debugPrint('⚠️ 圖片排程通知失敗: $e');
+            }
+          }
+          setState(() => _selectedReceivers = []);
+          _resetForm();
+          return;
+        }
         final docIds = await _firebaseService.saveScheduledMessageToMultiple(
           messageData: {
             'message': newMsg.message,
@@ -1460,12 +1520,31 @@ class _HomePageState extends State<HomePage> {
           });
         }
       } else if (_selectedReceiverId != null) {
+        // 圖片訊息：先上傳圖片取得網址
+        String? imageUrl;
+        if (_isImageMode && _selectedImageFile != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🖼️ 上傳圖片中...')),
+          );
+          imageUrl = await ImageMessageService.uploadImage(_selectedImageFile!);
+          if (imageUrl == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('❌ 圖片上傳失敗'),
+                backgroundColor: Colors.red,
+              ));
+            }
+            return;
+          }
+        }
         final docId = await FirebaseService().saveScheduledMessage({
           'receiverId': _selectedReceiverId,
           'receiverName': _selectedReceiverName,
-          'message': newMsg.message,
+          'message': _isImageMode ? '🖼️ 圖片訊息' : newMsg.message,
           'scheduledTime': newMsg.time.millisecondsSinceEpoch,
           'targetTimeZone': newMsg.targetTimeZone,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+          if (imageUrl != null) 'messageType': 'image',
         });
         if (docId != null && newMsg.id != null) {
           newMsg.firestoreIds = [docId];
@@ -1476,6 +1555,19 @@ class _HomePageState extends State<HomePage> {
           } catch (e) {
             debugPrint('❌ 儲存 firestoreId 失敗: $e');
           }
+        }
+        // ✅ 通知發送方自己
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _isImageMode
+                    ? '🖼️ 圖片訊息已排程傳給 ${_selectedReceiverName ?? '收件人'}'
+                    : '✅ 訊息已排程傳給 ${_selectedReceiverName ?? '收件人'}',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
         await QuotaService.incrementUsage();
       }
@@ -1531,7 +1623,7 @@ class _HomePageState extends State<HomePage> {
         await notificationManager.scheduleNotification(
           id: newMsg.id!,
           title: '🔔 愛傳時提醒',
-          body: newMsg.message,
+          body: _isImageMode ? '🖼️ 圖片訊息' : newMsg.message,
           scheduledTime: newMsg.time,
           soundType: newMsg.soundEnabled ? newMsg.soundPath : 'notification',
           vibrationEnabled: newMsg.vibrationEnabled,
@@ -1761,7 +1853,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// ✅ 編輯任務（完整功能版本）
-  void _editMessage(int index) {
+  void _editMessage(int index) async {
     final msg = _scheduledMessages[index];
     final controller = TextEditingController(text: msg.message);
     final DateTime oldTime = msg.time;
@@ -1795,6 +1887,37 @@ class _HomePageState extends State<HomePage> {
     double editVibrationIntensity = msg.vibrationIntensity;
     int editVibrationRepeat = msg.vibrationRepeat;
 
+    // ✅ 圖片編輯相關變數
+    File? editImageFile;
+    String? editImageUrl;
+    // ✅ 從 Firestore 取得原本的圖片網址
+    try {
+      final user = FirebaseService().currentUser;
+      if (user != null) {
+        Query query = FirebaseFirestore.instance
+            .collection('scheduled_messages')
+            .where('senderId', isEqualTo: user.uid)
+            .where('scheduledTime', isEqualTo: msg.time.millisecondsSinceEpoch);
+        if (msg.firestoreIds.isNotEmpty) {
+          final doc = await FirebaseFirestore.instance
+              .collection('scheduled_messages')
+              .doc(msg.firestoreIds.first)
+              .get();
+          if (doc.exists) {
+            editImageUrl = doc.data()?['imageUrl'] as String?;
+          }
+        } else {
+          final snapshot = await query.limit(1).get();
+          if (snapshot.docs.isNotEmpty) {
+            final data = snapshot.docs.first.data() as Map<String, dynamic>;
+            editImageUrl = data['imageUrl'] as String?;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ 無法取得圖片網址: $e');
+    }
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1812,6 +1935,76 @@ class _HomePageState extends State<HomePage> {
                     decoration: const InputDecoration(labelText: '訊息內容'),
                   ),
                   const SizedBox(height: 8),
+
+                  // ✅ 圖片編輯區域（圖片訊息才顯示）
+                  if (true) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text('圖片訊息',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          if (editImageFile != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(editImageFile!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover),
+                            )
+                          else if (editImageUrl != null)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(editImageUrl!,
+                                  height: 150,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover),
+                            ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final file = await ImageMessageService
+                                      .showImageSourceDialog(context);
+                                  if (file != null) {
+                                    setDialogState(() {
+                                      editImageFile = file;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.photo_library),
+                                label: const Text('換圖片'),
+                              ),
+                              if (editImageFile != null ||
+                                  editImageUrl != null) ...[
+                                const SizedBox(width: 8),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    setDialogState(() {
+                                      editImageFile = null;
+                                      editImageUrl = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  label: const Text('移除圖片',
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // 時間選擇
                   ElevatedButton(
@@ -2533,18 +2726,40 @@ class _HomePageState extends State<HomePage> {
                   }
                 }
 
+                // ✅ 如果有新圖片，先上傳
+                String? finalImageUrl = editImageUrl;
+                if (editImageFile != null) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('🖼️ 上傳新圖片中...')),
+                    );
+                  }
+                  finalImageUrl =
+                      await ImageMessageService.uploadImage(editImageFile!);
+                }
+
                 // ✅ 用 firestoreIds 直接更新 Firestore
                 if (msg.firestoreIds.isNotEmpty) {
                   try {
                     for (final docId in msg.firestoreIds) {
-                      await FirebaseFirestore.instance
-                          .collection('scheduled_messages')
-                          .doc(docId)
-                          .update({
+                      final Map<String, dynamic> updateData = {
                         'status': 'scheduled',
                         'scheduledTime': newTime.millisecondsSinceEpoch,
                         'message': controller.text,
-                      });
+                      };
+                      if (editImageUrl != null || editImageFile != null) {
+                        if (finalImageUrl != null) {
+                          updateData['imageUrl'] = finalImageUrl;
+                          updateData['messageType'] = 'image';
+                        } else {
+                          updateData['imageUrl'] = FieldValue.delete();
+                          updateData['messageType'] = FieldValue.delete();
+                        }
+                      }
+                      await FirebaseFirestore.instance
+                          .collection('scheduled_messages')
+                          .doc(docId)
+                          .update(updateData);
                       debugPrint('✅ Firestore 已直接更新 docId: $docId');
                     }
                   } catch (e) {

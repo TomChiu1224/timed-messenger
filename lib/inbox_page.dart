@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'firebase_service.dart';
@@ -18,17 +19,19 @@ class _InboxPageState extends State<InboxPage>
   List<Map<String, dynamic>> _sentMessages = [];
   bool _isLoading = true;
   late TabController _tabController;
+  StreamSubscription? _messagesSubscription;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadMessages();
+    _startListeningMessages();
     _loadSentMessages();
   }
 
   @override
   void dispose() {
+    _messagesSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -59,6 +62,34 @@ class _InboxPageState extends State<InboxPage>
     } catch (e) {
       print('❌ 載入已發送失敗：$e');
     }
+  }
+
+  void _startListeningMessages() {
+    final user = FirebaseService().currentUser;
+    if (user == null) return;
+    setState(() => _isLoading = true);
+    _messagesSubscription = FirebaseFirestore.instance
+        .collection('scheduled_messages')
+        .where('receiverId', isEqualTo: user.uid)
+        .snapshots()
+        .listen((snapshot) {
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
+      list.sort((a, b) {
+        final aTime = a['scheduledTime'] ?? 0;
+        final bTime = b['scheduledTime'] ?? 0;
+        return (bTime as int).compareTo(aTime as int);
+      });
+      if (mounted) {
+        setState(() {
+          _messages = list;
+          _isLoading = false;
+        });
+      }
+    });
   }
 
   Future<void> _loadMessages() async {
@@ -134,6 +165,92 @@ class _InboxPageState extends State<InboxPage>
     );
   }
 
+  void _openSentMessage(Map<String, dynamic> msg) {
+    final isImage = msg['messageType'] == 'image';
+    final imageUrl = msg['imageUrl'] as String?;
+    final isVoice = msg['messageType'] == 'voice';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('傳給 ${msg['receiverName'] ?? '未知用戶'}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isImage && imageUrl != null) ...[
+              const Text('🖼️ 圖片訊息', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => Dialog(
+                      backgroundColor: Colors.black,
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: 200,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return const SizedBox(
+                        height: 200,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stack) => const SizedBox(
+                      height: 100,
+                      child: Center(
+                        child: Icon(Icons.broken_image,
+                            size: 48, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text('點擊圖片可放大',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
+            ] else if (isVoice) ...[
+              const Text('🎙️ 語音訊息', style: TextStyle(fontSize: 16)),
+            ] else ...[
+              Text(msg['message'] ?? '（無內容）',
+                  style: const TextStyle(fontSize: 16)),
+            ],
+            const SizedBox(height: 12),
+            Text('排程時間：${_formatTime(msg['scheduledTime'])}',
+                style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('關閉'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openMessage(Map<String, dynamic> msg) async {
     final docId = msg['docId'] as String?;
     if (docId != null && msg['status'] != 'read') {
@@ -145,6 +262,8 @@ class _InboxPageState extends State<InboxPage>
 
     final isVoice = msg['messageType'] == 'voice';
     final voiceUrl = msg['voiceUrl'] as String?;
+    final isImage = msg['messageType'] == 'image';
+    final imageUrl = msg['imageUrl'] as String?;
 
     showDialog(
       context: context,
@@ -180,6 +299,59 @@ class _InboxPageState extends State<InboxPage>
                       },
                     ),
                   ),
+                ] else if (isImage && imageUrl != null) ...[
+                  const Text('🖼️ 圖片訊息', style: TextStyle(fontSize: 16)),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          backgroundColor: Colors.black,
+                          child: InteractiveViewer(
+                            child: Image.network(
+                              imageUrl,
+                              fit: BoxFit.contain,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: 200,
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const SizedBox(
+                            height: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          );
+                        },
+                        errorBuilder: (context, error, stack) => const SizedBox(
+                          height: 100,
+                          child: Center(
+                            child: Icon(Icons.broken_image,
+                                size: 48, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text('點擊圖片可放大',
+                      style: TextStyle(color: Colors.grey, fontSize: 12)),
                 ] else ...[
                   Text(msg['message'] ?? '（無內容）',
                       style: const TextStyle(fontSize: 16)),
@@ -272,15 +444,33 @@ class _InboxPageState extends State<InboxPage>
                                   size: 20,
                                 ),
                               ),
-                              title: Text(
-                                msg['message'] ?? '（無內容）',
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontWeight: isUnread
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                ),
+                              title: Row(
+                                children: [
+                                  if (msg['messageType'] == 'image')
+                                    const Padding(
+                                      padding: EdgeInsets.only(right: 4),
+                                      child: Icon(Icons.image,
+                                          size: 16, color: Colors.blue),
+                                    ),
+                                  if (msg['messageType'] == 'voice')
+                                    const Padding(
+                                      padding: EdgeInsets.only(right: 4),
+                                      child: Icon(Icons.mic,
+                                          size: 16, color: Colors.purple),
+                                    ),
+                                  Expanded(
+                                    child: Text(
+                                      msg['message'] ?? '（無內容）',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontWeight: isUnread
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               subtitle: Text(
                                 '來自：${msg['senderName'] ?? '未知'} · ${_formatTime(msg['scheduledTime'])}',
@@ -386,6 +576,7 @@ class _InboxPageState extends State<InboxPage>
                               ),
                             ),
                           ),
+                          onTap: () => _openSentMessage(msg),
                         ),
                       );
                     },

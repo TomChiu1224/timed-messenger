@@ -1,9 +1,11 @@
+import 'services/theme_manager.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'voice_message_service.dart';
+import 'services/theme_manager.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -284,7 +286,8 @@ class _InboxPageState extends State<InboxPage>
                       icon: Icon(_isPlaying ? Icons.stop : Icons.play_arrow),
                       label: Text(_isPlaying ? '停止播放' : '播放語音'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
+                        backgroundColor: Color(
+                            ThemeManager().currentColors['primary'] as int),
                         foregroundColor: Colors.white,
                       ),
                       onPressed: () async {
@@ -381,7 +384,7 @@ class _InboxPageState extends State<InboxPage>
     return Scaffold(
       appBar: AppBar(
         title: const Text('收件匣'),
-        backgroundColor: Colors.purple,
+        backgroundColor: ThemeManager().currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -453,10 +456,13 @@ class _InboxPageState extends State<InboxPage>
                                           size: 16, color: Colors.blue),
                                     ),
                                   if (msg['messageType'] == 'voice')
-                                    const Padding(
+                                    Padding(
                                       padding: EdgeInsets.only(right: 4),
                                       child: Icon(Icons.mic,
-                                          size: 16, color: Colors.purple),
+                                          size: 16,
+                                          color: Color(ThemeManager()
+                                                  .currentColors['primary']
+                                              as int)),
                                     ),
                                   Expanded(
                                     child: Text(

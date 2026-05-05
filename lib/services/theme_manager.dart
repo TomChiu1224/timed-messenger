@@ -1,21 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 🎨 主題管理器 - 負責主題色彩的切換和儲存
 class ThemeManager extends ChangeNotifier {
   static final ThemeManager _instance = ThemeManager._internal();
   factory ThemeManager() => _instance;
   ThemeManager._internal();
 
-  // 當前主題設定
   String _currentThemeColor = 'purple';
   bool _isDarkMode = false;
 
-  // Getters
   String get currentThemeColor => _currentThemeColor;
   bool get isDarkMode => _isDarkMode;
 
-  /// 預設主題色彩方案
   static const Map<String, Map<String, Color>> themeColors = {
     'purple': {
       'primary': Color(0xFF9C27B0),
@@ -23,58 +19,91 @@ class ThemeManager extends ChangeNotifier {
       'accent': Color(0xFFE1BEE7),
       'background': Color(0xFFF3E5F5),
     },
-    'blue': {
-      'primary': Color(0xFF2196F3),
-      'primaryDark': Color(0xFF1976D2),
-      'accent': Color(0xFFBBDEFB),
-      'background': Color(0xFFE3F2FD),
-    },
-    'green': {
-      'primary': Color(0xFF4CAF50),
-      'primaryDark': Color(0xFF388E3C),
-      'accent': Color(0xFFC8E6C9),
-      'background': Color(0xFFE8F5E8),
-    },
-    'orange': {
-      'primary': Color(0xFFFF9800),
-      'primaryDark': Color(0xFFF57C00),
-      'accent': Color(0xFFFFCC02),
-      'background': Color(0xFFFFF3E0),
-    },
     'pink': {
       'primary': Color(0xFFE91E63),
       'primaryDark': Color(0xFFC2185B),
       'accent': Color(0xFFF8BBD9),
       'background': Color(0xFFFCE4EC),
     },
+    'blue': {
+      'primary': Color(0xFF1565C0),
+      'primaryDark': Color(0xFF0D47A1),
+      'accent': Color(0xFF90CAF9),
+      'background': Color(0xFFE3F2FD),
+    },
+    'green': {
+      'primary': Color(0xFF2E7D32),
+      'primaryDark': Color(0xFF1B5E20),
+      'accent': Color(0xFFA5D6A7),
+      'background': Color(0xFFE8F5E9),
+    },
+    'midnight': {
+      'primary': Color(0xFF37474F),
+      'primaryDark': Color(0xFF263238),
+      'accent': Color(0xFF78909C),
+      'background': Color(0xFF121212),
+    },
+    'neon': {
+      'primary': Color(0xFF00BCD4),
+      'primaryDark': Color(0xFF006064),
+      'accent': Color(0xFF00E5FF),
+      'background': Color(0xFF0A0A1A),
+    },
+    'japanese': {
+      'primary': Color(0xFFAD8B73),
+      'primaryDark': Color(0xFF795548),
+      'accent': Color(0xFFFFCCBC),
+      'background': Color(0xFFFFF8F0),
+    },
+    'gold': {
+      'primary': Color(0xFFB8860B),
+      'primaryDark': Color(0xFF7B5800),
+      'accent': Color(0xFFFFD700),
+      'background': Color(0xFF1A1A1A),
+    },
   };
 
-  /// 取得當前主題色彩配置
   Map<String, Color> get currentColors => themeColors[_currentThemeColor]!;
 
-  /// 建立淺色主題
   ThemeData get lightTheme {
     final colors = currentColors;
+    final bool isDarkBg = _currentThemeColor == 'midnight' ||
+        _currentThemeColor == 'neon' ||
+        _currentThemeColor == 'gold';
     return ThemeData(
-      brightness: Brightness.light,
-      primarySwatch: _createMaterialColor(colors['primary']!),
+      brightness: isDarkBg ? Brightness.dark : Brightness.light,
       primaryColor: colors['primary'],
-      scaffoldBackgroundColor: Colors.grey[50],
+      scaffoldBackgroundColor:
+          isDarkBg ? colors['background'] : Colors.grey[50],
       appBarTheme: AppBarTheme(
         backgroundColor: colors['primary'],
         foregroundColor: Colors.white,
         elevation: 2,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          letterSpacing: _currentThemeColor == 'neon' ? 2.0 : 0.5,
+        ),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: isDarkBg ? Colors.grey[850] : Colors.white,
+        elevation: _currentThemeColor == 'japanese' ? 1 : 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            _currentThemeColor == 'japanese' ? 16 : 12,
+          ),
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: colors['primary'],
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(
+              _currentThemeColor == 'japanese' ? 24 : 8,
+            ),
+          ),
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -84,48 +113,24 @@ class ThemeManager extends ChangeNotifier {
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: colors['primary'],
       ),
-    );
-  }
-
-  /// 建立深色主題
-  ThemeData get darkTheme {
-    final colors = currentColors;
-    return ThemeData(
-      brightness: Brightness.dark,
-      primarySwatch: _createMaterialColor(colors['primary']!),
-      primaryColor: colors['primary'],
-      scaffoldBackgroundColor: Colors.grey[900],
-      appBarTheme: AppBarTheme(
-        backgroundColor: colors['primaryDark'],
-        foregroundColor: Colors.white,
-        elevation: 2,
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.grey[800],
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: colors['primary'],
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: colors['primary'],
-        foregroundColor: Colors.white,
-      ),
-      progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: colors['primary'],
+      colorScheme: ColorScheme(
+        brightness: isDarkBg ? Brightness.dark : Brightness.light,
+        primary: colors['primary']!,
+        onPrimary: Colors.white,
+        secondary: colors['accent']!,
+        onSecondary: Colors.black,
+        error: Colors.red,
+        onError: Colors.white,
+        surface:
+            isDarkBg ? (colors['background'] ?? Colors.black) : Colors.white,
+        onSurface: isDarkBg ? Colors.white : Colors.black,
       ),
     );
   }
 
-  /// 取得當前主題
-  ThemeData get currentTheme => _isDarkMode ? darkTheme : lightTheme;
+  ThemeData get darkTheme => lightTheme;
+  ThemeData get currentTheme => lightTheme;
 
-  /// 切換主題色彩
   Future<void> changeThemeColor(String colorName) async {
     if (themeColors.containsKey(colorName)) {
       _currentThemeColor = colorName;
@@ -134,21 +139,18 @@ class ThemeManager extends ChangeNotifier {
     }
   }
 
-  /// 切換深色/淺色模式
   Future<void> toggleDarkMode() async {
     _isDarkMode = !_isDarkMode;
     await _saveThemeSettings();
     notifyListeners();
   }
 
-  /// 設定深色模式
   Future<void> setDarkMode(bool isDark) async {
     _isDarkMode = isDark;
     await _saveThemeSettings();
     notifyListeners();
   }
 
-  /// 載入已儲存的主題設定
   Future<void> loadThemeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -156,27 +158,24 @@ class ThemeManager extends ChangeNotifier {
       _isDarkMode = prefs.getBool('is_dark_mode') ?? false;
       notifyListeners();
     } catch (e) {
-      print('❌ 載入主題設定失敗: $e');
+      debugPrint('❌ 載入主題設定失敗: $e');
     }
   }
 
-  /// 儲存主題設定到本地
   Future<void> _saveThemeSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('theme_color', _currentThemeColor);
       await prefs.setBool('is_dark_mode', _isDarkMode);
     } catch (e) {
-      print('❌ 儲存主題設定失敗: $e');
+      debugPrint('❌ 儲存主題設定失敗: $e');
     }
   }
 
-  /// 建立MaterialColor（Flutter主題系統需要）
   MaterialColor _createMaterialColor(Color color) {
     List strengths = <double>[.05];
     Map<int, Color> swatch = <int, Color>{};
     final int r = color.red, g = color.green, b = color.blue;
-
     for (int i = 1; i < 10; i++) {
       strengths.add(0.1 * i);
     }
@@ -192,18 +191,19 @@ class ThemeManager extends ChangeNotifier {
     return MaterialColor(color.value, swatch);
   }
 
-  /// 取得主題色彩的顯示名稱
   static String getThemeDisplayName(String colorName) {
     const Map<String, String> displayNames = {
-      'purple': '典雅紫',
-      'blue': '海洋藍',
-      'green': '自然綠',
-      'orange': '活力橙',
-      'pink': '浪漫粉',
+      'purple': '💜 浪漫紫',
+      'pink': '🩷 玫瑰粉',
+      'blue': '🌊 深海藍',
+      'green': '🍃 自然綠',
+      'midnight': '🌙 午夜黑',
+      'neon': '🤖 科技霓虹',
+      'japanese': '🌸 日系手帳',
+      'gold': '🔥 橘金商務',
     };
     return displayNames[colorName] ?? colorName;
   }
 
-  /// 取得所有可用的主題色彩
   static List<String> get availableThemes => themeColors.keys.toList();
 }

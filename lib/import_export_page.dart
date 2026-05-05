@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'models/scheduled_message.dart';
 import 'database_helper.dart';
+import 'services/theme_manager.dart';
 
 /// ✅ 匯入匯出功能頁面
 class ImportExportPage extends StatefulWidget {
@@ -58,7 +59,6 @@ class _ImportExportPageState extends State<ImportExportPage> {
       setState(() {
         _statusMessage = '✅ JSON匯出成功！共匯出 ${messages.length} 個排程';
       });
-
     } catch (e) {
       setState(() {
         _statusMessage = '❌ JSON匯出失敗: $e';
@@ -118,7 +118,9 @@ class _ImportExportPageState extends State<ImportExportPage> {
       // 轉換每個排程為CSV行
       for (var msgMap in messages) {
         final msg = ScheduledMessage.fromMap(msgMap);
-        final categoryName = msg.categoryId != null ? categoryMap[msg.categoryId] ?? '未分類' : '無分類';
+        final categoryName = msg.categoryId != null
+            ? categoryMap[msg.categoryId] ?? '未分類'
+            : '無分類';
 
         csvLines.add([
           msg.id?.toString() ?? '',
@@ -129,8 +131,12 @@ class _ImportExportPageState extends State<ImportExportPage> {
           msg.repeatDays.join(';'),
           msg.repeatCount.toString(),
           msg.currentCount.toString(),
-          msg.startDate != null ? DateFormat('yyyy-MM-dd').format(msg.startDate!) : '',
-          msg.endDate != null ? DateFormat('yyyy-MM-dd').format(msg.endDate!) : '',
+          msg.startDate != null
+              ? DateFormat('yyyy-MM-dd').format(msg.startDate!)
+              : '',
+          msg.endDate != null
+              ? DateFormat('yyyy-MM-dd').format(msg.endDate!)
+              : '',
           msg.targetTimeZone,
           msg.targetTimeZoneName,
           categoryName,
@@ -147,7 +153,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
       final csvContent = csvLines.join('\n');
 
       // 加入BOM以支援Excel正確顯示中文
-      final csvWithBOM = '\uFEFF' + csvContent;
+      final csvWithBOM = '\uFEFF$csvContent';
 
       // 生成檔案名稱
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
@@ -159,7 +165,6 @@ class _ImportExportPageState extends State<ImportExportPage> {
       setState(() {
         _statusMessage = '✅ CSV匯出成功！共匯出 ${messages.length} 個排程';
       });
-
     } catch (e) {
       setState(() {
         _statusMessage = '❌ CSV匯出失敗: $e';
@@ -193,7 +198,8 @@ class _ImportExportPageState extends State<ImportExportPage> {
 
       // 建立文字格式的排程列表
       final textLines = <String>[];
-      textLines.add('愛傳時 排程清單 - ${DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now())}');
+      textLines.add(
+          '愛傳時 排程清單 - ${DateFormat('yyyy年MM月dd日 HH:mm').format(DateTime.now())}');
       textLines.add('=' * 50);
       textLines.add('總排程數：${messages.length}');
       textLines.add('');
@@ -202,7 +208,9 @@ class _ImportExportPageState extends State<ImportExportPage> {
       final messagesByCategory = <String, List<ScheduledMessage>>{};
       for (var msgMap in messages) {
         final msg = ScheduledMessage.fromMap(msgMap);
-        final categoryName = msg.categoryId != null ? categoryMap[msg.categoryId] ?? '未分類' : '無分類';
+        final categoryName = msg.categoryId != null
+            ? categoryMap[msg.categoryId] ?? '未分類'
+            : '無分類';
 
         if (!messagesByCategory.containsKey(categoryName)) {
           messagesByCategory[categoryName] = [];
@@ -217,7 +225,8 @@ class _ImportExportPageState extends State<ImportExportPage> {
 
         for (var msg in entry.value) {
           textLines.add('• ${msg.message}');
-          textLines.add('  時間：${DateFormat('yyyy/MM/dd HH:mm').format(msg.time)}');
+          textLines
+              .add('  時間：${DateFormat('yyyy/MM/dd HH:mm').format(msg.time)}');
           textLines.add('  狀態：${msg.sent ? "已發送" : "待發送"}');
           if (msg.repeatType != 'none') {
             textLines.add('  重複：${_getRepeatTypeText(msg.repeatType)}');
@@ -243,7 +252,6 @@ class _ImportExportPageState extends State<ImportExportPage> {
 
       // 顯示預覽對話框
       _showClipboardPreview(textContent);
-
     } catch (e) {
       setState(() {
         _statusMessage = '❌ 複製失敗: $e';
@@ -322,7 +330,8 @@ class _ImportExportPageState extends State<ImportExportPage> {
         final categories = jsonData['categories'] as List? ?? [];
 
         // 詢問匯入方式
-        final importMode = await _showImportModeDialog(messages.length, categories.length);
+        final importMode =
+            await _showImportModeDialog(messages.length, categories.length);
         if (importMode == null) return;
 
         setState(() {
@@ -336,13 +345,17 @@ class _ImportExportPageState extends State<ImportExportPage> {
         if (categories.isNotEmpty) {
           for (var catData in categories) {
             try {
-              final category = TaskCategory.fromMap(catData as Map<String, dynamic>);
+              final category =
+                  TaskCategory.fromMap(catData as Map<String, dynamic>);
               // 檢查分類是否已存在
-              final existingCategories = await _databaseHelper.getAllCategories();
-              final exists = existingCategories.any((cat) => cat.name == category.name);
+              final existingCategories =
+                  await _databaseHelper.getAllCategories();
+              final exists =
+                  existingCategories.any((cat) => cat.name == category.name);
 
               if (!exists || importMode == 'replace') {
-                await _databaseHelper.insertCategory(category.copyWith(id: null));
+                await _databaseHelper
+                    .insertCategory(category.copyWith(id: null));
                 importedCategories++;
               }
             } catch (e) {
@@ -368,18 +381,17 @@ class _ImportExportPageState extends State<ImportExportPage> {
         }
 
         setState(() {
-          _statusMessage = '✅ 匯入完成！排程：$importedMessages 個，分類：$importedCategories 個';
+          _statusMessage =
+              '✅ 匯入完成！排程：$importedMessages 個，分類：$importedCategories 個';
         });
 
         // 顯示結果對話框
         _showImportResultDialog(importedMessages, importedCategories);
-
       } else {
         setState(() {
           _statusMessage = '取消選擇檔案';
         });
       }
-
     } catch (e) {
       setState(() {
         _statusMessage = '❌ JSON匯入失敗: $e';
@@ -392,7 +404,8 @@ class _ImportExportPageState extends State<ImportExportPage> {
   }
 
   /// 顯示匯入模式選擇對話框
-  Future<String?> _showImportModeDialog(int messageCount, int categoryCount) async {
+  Future<String?> _showImportModeDialog(
+      int messageCount, int categoryCount) async {
     return await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
@@ -401,7 +414,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('即將匯入：'),
+            const Text('即將匯入：'),
             Text('• 排程：$messageCount 個'),
             Text('• 分類：$categoryCount 個'),
             const SizedBox(height: 16),
@@ -436,7 +449,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('成功匯入：'),
+            const Text('成功匯入：'),
             Text('• 排程：$messageCount 個'),
             Text('• 分類：$categoryCount 個'),
             const SizedBox(height: 16),
@@ -454,7 +467,8 @@ class _ImportExportPageState extends State<ImportExportPage> {
   }
 
   /// 儲存檔案
-  Future<void> _saveFile(String content, String fileName, String mimeType) async {
+  Future<void> _saveFile(
+      String content, String fileName, String mimeType) async {
     try {
       // 獲取文件目錄
       final directory = await getApplicationDocumentsDirectory();
@@ -469,7 +483,6 @@ class _ImportExportPageState extends State<ImportExportPage> {
         subject: fileName,
         text: '愛傳時APP資料匯出',
       );
-
     } catch (e) {
       throw Exception('儲存檔案失敗: $e');
     }
@@ -478,17 +491,28 @@ class _ImportExportPageState extends State<ImportExportPage> {
   /// 轉換重複類型為中文
   String _getRepeatTypeText(String repeatType) {
     switch (repeatType) {
-      case 'none': return '不重複';
-      case 'daily': return '每日';
-      case 'weekly': return '每週';
-      case 'weekdays': return '平日';
-      case 'monthly': return '每月';
-      case 'monthlyDates': return '每月指定日期';
-      case 'monthlyOrdinal': return '每月第N個星期X';
-      case 'yearly': return '每年';
-      case 'interval': return '自訂間隔';
-      case 'custom': return '自訂次數';
-      default: return repeatType;
+      case 'none':
+        return '不重複';
+      case 'daily':
+        return '每日';
+      case 'weekly':
+        return '每週';
+      case 'weekdays':
+        return '平日';
+      case 'monthly':
+        return '每月';
+      case 'monthlyDates':
+        return '每月指定日期';
+      case 'monthlyOrdinal':
+        return '每月第N個星期X';
+      case 'yearly':
+        return '每年';
+      case 'interval':
+        return '自訂間隔';
+      case 'custom':
+        return '自訂次數';
+      default:
+        return repeatType;
     }
   }
 
@@ -562,22 +586,28 @@ class _ImportExportPageState extends State<ImportExportPage> {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: _statusMessage.startsWith('✅') ? Colors.green.shade50 :
-                  _statusMessage.startsWith('❌') ? Colors.red.shade50 :
-                  Colors.blue.shade50,
+                  color: _statusMessage.startsWith('✅')
+                      ? Colors.green.shade50
+                      : _statusMessage.startsWith('❌')
+                          ? Colors.red.shade50
+                          : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: _statusMessage.startsWith('✅') ? Colors.green :
-                    _statusMessage.startsWith('❌') ? Colors.red :
-                    Colors.blue,
+                    color: _statusMessage.startsWith('✅')
+                        ? Colors.green
+                        : _statusMessage.startsWith('❌')
+                            ? Colors.red
+                            : Colors.blue,
                   ),
                 ),
                 child: Text(
                   _statusMessage,
                   style: TextStyle(
-                    color: _statusMessage.startsWith('✅') ? Colors.green.shade800 :
-                    _statusMessage.startsWith('❌') ? Colors.red.shade800 :
-                    Colors.blue.shade800,
+                    color: _statusMessage.startsWith('✅')
+                        ? Colors.green.shade800
+                        : _statusMessage.startsWith('❌')
+                            ? Colors.red.shade800
+                            : Colors.blue.shade800,
                   ),
                 ),
               ),
@@ -646,7 +676,7 @@ class _ImportExportPageState extends State<ImportExportPage> {
                     title: 'JSON匯入',
                     description: '從備份檔案還原資料',
                     icon: Icons.restore,
-                    color: Colors.purple,
+                    color: ThemeManager().currentColors['primary'] as Color,
                     onTap: _importFromJSON,
                     enabled: !_isProcessing,
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/task_category.dart';
 import 'package:intl/intl.dart';
 import 'database_helper.dart';
+import 'services/theme_manager.dart';
 
 /// ✅ 統計報表頁面（已移除音效統計）
 class StatisticsPage extends StatefulWidget {
@@ -428,7 +429,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 1.2,
+                    childAspectRatio: 1.0,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
                     children: [
@@ -436,7 +437,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         title: '總排程數',
                         value: '${_overallStats['total_messages'] ?? 0}',
                         icon: Icons.schedule,
-                        color: Colors.purple,
+                        color: ThemeManager().currentColors['primary'] as Color,
                       ),
                       _buildStatCard(
                         title: '已發送',

@@ -1200,6 +1200,7 @@ class _HomePageState extends State<HomePage> {
             'displayName': data['displayName'] ?? data['username'] ?? '未知用戶',
             'username': data['username'] ?? '',
             'email': data['email'] ?? '',
+            'isFavorite': doc.data()?['isFavorite'] ?? false,
           });
         }
       }
@@ -1224,51 +1225,176 @@ class _HomePageState extends State<HomePage> {
 
     final result = await showDialog<List<Map<String, dynamic>>>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('選擇收件人'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: friendList.length,
-              itemBuilder: (context, index) {
-                final friend = friendList[index];
-                final isSelected = tempSelectedUids.contains(friend['uid']);
-                return CheckboxListTile(
-                  title: Text(friend['displayName']),
-                  subtitle: Text(friend['email']),
-                  value: isSelected,
-                  onChanged: (checked) {
-                    setDialogState(() {
-                      if (checked == true) {
-                        tempSelectedUids.add(friend['uid']);
-                      } else {
-                        tempSelectedUids.remove(friend['uid']);
-                      }
-                    });
+      builder: (context) {
+        String searchQuery = '';
+        bool showFavoriteOnly = false;
+        final searchController = TextEditingController();
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final filtered = friendList.where((f) {
+              final name = (f['displayName'] ?? '').toLowerCase();
+              final matchSearch = name.contains(searchQuery.toLowerCase());
+              final matchFav = !showFavoriteOnly || f['isFavorite'] == true;
+              return matchSearch && matchFav;
+            }).toList()
+              ..sort((a, b) {
+                final aFav = a['isFavorite'] == true ? 0 : 1;
+                final bFav = b['isFavorite'] == true ? 0 : 1;
+                return aFav.compareTo(bFav);
+              });
+
+            return AlertDialog(
+              title: const Text('選擇收件人'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 400,
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: searchController,
+                      decoration: const InputDecoration(
+                        hintText: '搜尋好友...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      onChanged: (val) =>
+                          setDialogState(() => searchQuery = val),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () =>
+                                setDialogState(() => showFavoriteOnly = true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: showFavoriteOnly
+                                    ? Colors.red.shade50
+                                    : Colors.grey.shade100,
+                                border: Border(
+                                    bottom: BorderSide(
+                                  color: showFavoriteOnly
+                                      ? Colors.red
+                                      : Colors.transparent,
+                                  width: 2,
+                                )),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.favorite,
+                                      size: 16,
+                                      color: showFavoriteOnly
+                                          ? Colors.red
+                                          : Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text('最愛',
+                                      style: TextStyle(
+                                          color: showFavoriteOnly
+                                              ? Colors.red
+                                              : Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () =>
+                                setDialogState(() => showFavoriteOnly = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: !showFavoriteOnly
+                                    ? Colors.purple.shade50
+                                    : Colors.grey.shade100,
+                                border: Border(
+                                    bottom: BorderSide(
+                                  color: !showFavoriteOnly
+                                      ? Colors.purple
+                                      : Colors.transparent,
+                                  width: 2,
+                                )),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.people,
+                                      size: 16,
+                                      color: !showFavoriteOnly
+                                          ? Colors.purple
+                                          : Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text('全部',
+                                      style: TextStyle(
+                                          color: !showFavoriteOnly
+                                              ? Colors.purple
+                                              : Colors.grey)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Text('沒有符合的好友',
+                                  style: TextStyle(color: Colors.grey)))
+                          : ListView.builder(
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) {
+                                final friend = filtered[index];
+                                final isSelected =
+                                    tempSelectedUids.contains(friend['uid']);
+                                return CheckboxListTile(
+                                  secondary: friend['isFavorite'] == true
+                                      ? const Icon(Icons.favorite,
+                                          color: Colors.red, size: 20)
+                                      : null,
+                                  title: Text(friend['displayName']),
+                                  subtitle: Text(friend['email']),
+                                  value: isSelected,
+                                  onChanged: (checked) {
+                                    setDialogState(() {
+                                      if (checked == true) {
+                                        tempSelectedUids.add(friend['uid']);
+                                      } else {
+                                        tempSelectedUids.remove(friend['uid']);
+                                      }
+                                    });
+                                  },
+                                ); // CheckboxListTile
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ), // SizedBox
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, null),
+                  child: const Text('取消'),
+                ), // TextButton
+                ElevatedButton(
+                  onPressed: () {
+                    final selected = friendList
+                        .where((f) => tempSelectedUids.contains(f['uid']))
+                        .toList();
+                    Navigator.pop(context, selected);
                   },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text('取消'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final selected = friendList
-                    .where((f) => tempSelectedUids.contains(f['uid']))
-                    .toList();
-                Navigator.pop(context, selected);
-              },
-              child: Text('確定（已選 ${tempSelectedUids.length} 人）'),
-            ),
-          ],
-        ),
-      ),
+                  child: Text('確定（已選 ${tempSelectedUids.length} 人）'),
+                ), // ElevatedButton
+              ],
+            ); // AlertDialog
+          },
+        ); // StatefulBuilder
+      },
     );
 
     if (result != null) {
@@ -2867,7 +2993,7 @@ class _HomePageState extends State<HomePage> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 400,
+            height: 550,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -2904,7 +3030,7 @@ class _HomePageState extends State<HomePage> {
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      childAspectRatio: 3,
+                      childAspectRatio: 2.2,
                       crossAxisSpacing: 8,
                       mainAxisSpacing: 8,
                     ),
@@ -3035,7 +3161,7 @@ class _HomePageState extends State<HomePage> {
       resizeToAvoidBottomInset: false, // ✅ 修正：防止底部溢出
 
       appBar: AppBar(
-        title: const Text('愛傳時 定時訊息提醒App'),
+        title: const Text('愛傳時', overflow: TextOverflow.visible),
         backgroundColor: _themeManager.currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
@@ -3247,41 +3373,66 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 8),
 
                         // 訊息類型切換
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              const Text('訊息類型：'),
-                              const SizedBox(width: 8),
-                              ChoiceChip(
-                                label: const Text('文字'),
-                                selected: !_isVoiceMode,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.text_fields, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('文字')
+                                  ],
+                                ),
+                                selected: !_isVoiceMode && !_isImageMode,
                                 onSelected: (_) => setState(() {
                                   _isVoiceMode = false;
                                   _isImageMode = false;
                                 }),
-                              ), // ChoiceChip
-                              const SizedBox(width: 8),
-                              ChoiceChip(
-                                label: const Text('🎙️ 語音'),
+                                showCheckmark: false,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.mic, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('語音')
+                                  ],
+                                ),
                                 selected: _isVoiceMode,
                                 onSelected: (_) => setState(() {
                                   _isVoiceMode = true;
                                   _isImageMode = false;
                                 }),
-                              ), // ChoiceChip
-                              const SizedBox(width: 8),
-                              ChoiceChip(
-                                label: const Text('🖼️ 圖片'),
+                                showCheckmark: false,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ChoiceChip(
+                                label: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.image, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('圖片')
+                                  ],
+                                ),
                                 selected: _isImageMode,
                                 onSelected: (_) => setState(() {
-                                  _isImageMode = true;
                                   _isVoiceMode = false;
+                                  _isImageMode = true;
                                 }),
-                              ), // ChoiceChip
-                            ],
-                          ), // Row
-                        ), // SingleChildScrollView
+                                showCheckmark: false,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 8),
                         if (_isImageMode)
                           _buildImagePicker()
@@ -4241,11 +4392,38 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const Divider(height: 1),
                 if (_scheduledMessages.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
                     child: Center(
-                        child: Text('尚無排程訊息',
-                            style: TextStyle(color: Colors.grey))),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_send_outlined,
+                            size: 80,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            '尚無排程訊息',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            '點擊下方「新增排程」開始傳送第一則訊息吧！',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else
                   ...List.generate(_scheduledMessages.length, (index) {
@@ -4275,11 +4453,47 @@ class _HomePageState extends State<HomePage> {
                                       : Icons.schedule,
                               color: Colors.white),
                         ),
-                        title: Text(message.message,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(
-                            '🕐 ${DateFormat('yyyy/MM/dd HH:mm').format(message.time)}'),
+                        title: Row(
+                          children: [
+                            if (false)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 4),
+                                child: Icon(Icons.image,
+                                    size: 16, color: Colors.blue),
+                              ),
+                            if (false)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 4),
+                                child: Icon(Icons.mic,
+                                    size: 16, color: Colors.purple),
+                              ),
+                            Expanded(
+                              child: Text(
+                                message.message.isNotEmpty
+                                    ? message.message
+                                    : '（無內容）',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                                '🕐 ${DateFormat('yyyy/MM/dd HH:mm').format(message.time)}'),
+                            if (message.receiverName != null &&
+                                message.receiverName!.isNotEmpty)
+                              Text(
+                                '👤 ${message.receiverName}',
+                                style: const TextStyle(
+                                    fontSize: 12, color: Colors.grey),
+                              ),
+                          ],
+                        ),
                         trailing: PopupMenuButton(
                           itemBuilder: (context) => [
                             const PopupMenuItem(

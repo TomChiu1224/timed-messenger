@@ -380,13 +380,33 @@ class FirebaseService {
             .doc(doc.id)
             .get();
         if (friendDoc.exists) {
-          results.add({'uid': doc.id, ...friendDoc.data()!});
+          results.add({
+            'uid': doc.id,
+            'isFavorite': doc.data()?['isFavorite'] ?? false,
+            ...friendDoc.data()!,
+          });
         }
       }
       return results;
     } catch (e) {
       print('❌ 取得好友列表失敗: $e');
       return [];
+    }
+  }
+
+  Future<void> toggleFavorite(String friendUid, bool isFavorite) async {
+    try {
+      final uid = getUserId();
+      if (uid == null) return;
+      await FirebaseFirestore.instance
+          .collection('friendships')
+          .doc(uid)
+          .collection('friends')
+          .doc(friendUid)
+          .update({'isFavorite': isFavorite});
+      print('✅ 最愛狀態已更新：$friendUid → $isFavorite');
+    } catch (e) {
+      print('❌ 更新最愛失敗：$e');
     }
   }
 

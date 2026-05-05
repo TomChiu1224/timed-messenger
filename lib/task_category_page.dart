@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'models/task_category.dart';
 import 'package:intl/intl.dart';
 import 'database_helper.dart';
+import 'services/theme_manager.dart';
 
 /// ✅ 任務分類管理頁面
 class TaskCategoryPage extends StatefulWidget {
@@ -36,7 +37,8 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
       // 為每個分類載入統計資訊
       for (var category in categories) {
         if (category.id != null) {
-          final categoryStats = await _databaseHelper.getCategoryUsageStats(category.id!);
+          final categoryStats =
+              await _databaseHelper.getCategoryUsageStats(category.id!);
           stats[category.id!] = categoryStats;
         }
       }
@@ -58,23 +60,52 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
   void _showCategoryDialog({TaskCategory? category}) {
     final isEditing = category != null;
     final nameController = TextEditingController(text: category?.name ?? '');
-    final descriptionController = TextEditingController(text: category?.description ?? '');
+    final descriptionController =
+        TextEditingController(text: category?.description ?? '');
     Color selectedColor = category?.color ?? Colors.blue;
     IconData selectedIcon = category?.icon ?? Icons.category;
 
     // 可選顏色
     final colors = [
-      Colors.blue, Colors.green, Colors.red, Colors.orange, Colors.purple,
-      Colors.pink, Colors.teal, Colors.amber, Colors.indigo, Colors.brown,
-      Colors.cyan, Colors.lime, Colors.deepOrange, Colors.deepPurple, Colors.blueGrey,
+      Colors.blue,
+      Colors.green,
+      Colors.red,
+      Colors.orange,
+      Colors.purple,
+      Colors.pink,
+      Colors.teal,
+      Colors.amber,
+      Colors.indigo,
+      Colors.brown,
+      Colors.cyan,
+      Colors.lime,
+      Colors.deepOrange,
+      Colors.deepPurple,
+      Colors.blueGrey,
     ];
 
     // 可選圖示
     final icons = [
-      Icons.work, Icons.person, Icons.favorite, Icons.school, Icons.sports_esports,
-      Icons.home, Icons.attach_money, Icons.category, Icons.shopping_cart, Icons.fitness_center,
-      Icons.restaurant, Icons.local_hospital, Icons.directions_car, Icons.flight, Icons.beach_access,
-      Icons.pets, Icons.music_note, Icons.camera_alt, Icons.book, Icons.computer,
+      Icons.work,
+      Icons.person,
+      Icons.favorite,
+      Icons.school,
+      Icons.sports_esports,
+      Icons.home,
+      Icons.attach_money,
+      Icons.category,
+      Icons.shopping_cart,
+      Icons.fitness_center,
+      Icons.restaurant,
+      Icons.local_hospital,
+      Icons.directions_car,
+      Icons.flight,
+      Icons.beach_access,
+      Icons.pets,
+      Icons.music_note,
+      Icons.camera_alt,
+      Icons.book,
+      Icons.computer,
     ];
 
     showDialog(
@@ -110,7 +141,8 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                   const SizedBox(height: 16),
 
                   // 顏色選擇
-                  const Text('選擇顏色', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('選擇顏色',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -142,12 +174,14 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                   const SizedBox(height: 16),
 
                   // 圖示選擇
-                  const Text('選擇圖示', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('選擇圖示',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   SizedBox(
                     height: 200,
                     child: GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 5,
                         crossAxisSpacing: 8,
                         mainAxisSpacing: 8,
@@ -173,7 +207,9 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                             ),
                             child: Icon(
                               icon,
-                              color: selectedIcon == icon ? selectedColor : Colors.grey.shade600,
+                              color: selectedIcon == icon
+                                  ? selectedColor
+                                  : Colors.grey.shade600,
                             ),
                           ),
                         );
@@ -207,12 +243,18 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                nameController.text.isNotEmpty ? nameController.text : '分類名稱預覽',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                nameController.text.isNotEmpty
+                                    ? nameController.text
+                                    : '分類名稱預覽',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                               Text(
-                                descriptionController.text.isNotEmpty ? descriptionController.text : '分類描述預覽',
-                                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                descriptionController.text.isNotEmpty
+                                    ? descriptionController.text
+                                    : '分類描述預覽',
+                                style: TextStyle(
+                                    color: Colors.grey.shade600, fontSize: 12),
                               ),
                             ],
                           ),
@@ -243,14 +285,16 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                     id: category?.id,
                     name: nameController.text.trim(),
                     description: descriptionController.text.trim(),
-                    colorValue: selectedColor.value,               // ✅ .value
-                    iconData: selectedIcon.codePoint.toString(),  // ✅ .codePoint.toString()
+                    colorValue: selectedColor.value, // ✅ .value
+                    iconData: selectedIcon.codePoint
+                        .toString(), // ✅ .codePoint.toString()
                     createdAt: category?.createdAt ?? DateTime.now(),
                     isDefault: category?.isDefault ?? false,
                   );
 
                   if (isEditing) {
-                    await _databaseHelper.updateCategory(category.id!, newCategory);
+                    await _databaseHelper.updateCategory(
+                        category.id!, newCategory);
                   } else {
                     await _databaseHelper.insertCategory(newCategory);
                   }
@@ -346,7 +390,8 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(category.description, style: TextStyle(color: Colors.grey.shade600)),
+              Text(category.description,
+                  style: TextStyle(color: Colors.grey.shade600)),
               const SizedBox(height: 16),
 
               // 統計資訊
@@ -363,21 +408,24 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('總任務數'),
-                          Text('${_categoryStats[category.id]!['total_tasks']}'),
+                          Text(
+                              '${_categoryStats[category.id]!['total_tasks']}'),
                         ],
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('已完成'),
-                          Text('${_categoryStats[category.id]!['completed_tasks']}'),
+                          Text(
+                              '${_categoryStats[category.id]!['completed_tasks']}'),
                         ],
                       ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('完成率'),
-                          Text('${_categoryStats[category.id]!['completion_rate']}%'),
+                          Text(
+                              '${_categoryStats[category.id]!['completion_rate']}%'),
                         ],
                       ),
                     ],
@@ -392,30 +440,35 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
               Expanded(
                 child: messages.isEmpty
                     ? const Center(
-                  child: Text('此分類尚無排程', style: TextStyle(color: Colors.grey)),
-                )
+                        child: Text('此分類尚無排程',
+                            style: TextStyle(color: Colors.grey)),
+                      )
                     : ListView.builder(
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    return ListTile(
-                      dense: true,
-                      leading: Icon(
-                        message.sent ? Icons.check_circle : Icons.schedule,
-                        color: message.sent ? Colors.green : Colors.orange,
-                        size: 20,
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final message = messages[index];
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              message.sent
+                                  ? Icons.check_circle
+                                  : Icons.schedule,
+                              color:
+                                  message.sent ? Colors.green : Colors.orange,
+                              size: 20,
+                            ),
+                            title: Text(
+                              message.message,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              DateFormat('yyyy/MM/dd HH:mm')
+                                  .format(message.time),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          );
+                        },
                       ),
-                      title: Text(
-                        message.message,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        DateFormat('yyyy/MM/dd HH:mm').format(message.time),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    );
-                  },
-                ),
               ),
             ],
           ),
@@ -435,7 +488,7 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('分類管理'),
-        backgroundColor: Colors.purple,
+        backgroundColor: ThemeManager().currentColors['primary'] as Color,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -447,126 +500,134 @@ class _TaskCategoryPageState extends State<TaskCategoryPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _categories.isEmpty
-          ? const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.category, size: 64, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('尚無分類', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-      )
-          : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final category = _categories[index];
-          final stats = _categoryStats[category.id];
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.category, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('尚無分類', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _categories.length,
+                  itemBuilder: (context, index) {
+                    final category = _categories[index];
+                    final stats = _categoryStats[category.id];
 
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: category.color,
-                  borderRadius: BorderRadius.circular(8),
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: category.color,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(category.icon, color: Colors.white),
+                        ),
+                        title: Row(
+                          children: [
+                            Text(
+                              category.name,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            if (category.isDefault) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '預設',
+                                  style: TextStyle(
+                                      fontSize: 10, color: Colors.blue),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(category.description),
+                            if (stats != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '任務數: ${stats['total_tasks']} | 完成率: ${stats['completion_rate']}%',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: PopupMenuButton(
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'view',
+                              child: ListTile(
+                                leading: Icon(Icons.visibility),
+                                title: Text('查看詳情'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            if (!category.isDefault)
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: ListTile(
+                                  leading: Icon(Icons.edit),
+                                  title: Text('編輯'),
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                            if (!category.isDefault)
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: ListTile(
+                                  leading:
+                                      Icon(Icons.delete, color: Colors.red),
+                                  title: Text('刪除',
+                                      style: TextStyle(color: Colors.red)),
+                                  contentPadding: EdgeInsets.zero,
+                                ),
+                              ),
+                          ],
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'view':
+                                _viewCategoryDetails(category);
+                                break;
+                              case 'edit':
+                                _showCategoryDialog(category: category);
+                                break;
+                              case 'delete':
+                                _deleteCategory(category);
+                                break;
+                            }
+                          },
+                        ),
+                        onTap: () => _viewCategoryDetails(category),
+                      ),
+                    );
+                  },
                 ),
-                child: Icon(category.icon, color: Colors.white),
-              ),
-              title: Row(
-                children: [
-                  Text(
-                    category.name,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  if (category.isDefault) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade100,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        '預設',
-                        style: TextStyle(fontSize: 10, color: Colors.blue),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(category.description),
-                  if (stats != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      '任務數: ${stats['total_tasks']} | 完成率: ${stats['completion_rate']}%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              trailing: PopupMenuButton(
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'view',
-                    child: ListTile(
-                      leading: Icon(Icons.visibility),
-                      title: Text('查看詳情'),
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                  if (!category.isDefault)
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        leading: Icon(Icons.edit),
-                        title: Text('編輯'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  if (!category.isDefault)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete, color: Colors.red),
-                        title: Text('刪除', style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                ],
-                onSelected: (value) {
-                  switch (value) {
-                    case 'view':
-                      _viewCategoryDetails(category);
-                      break;
-                    case 'edit':
-                      _showCategoryDialog(category: category);
-                      break;
-                    case 'delete':
-                      _deleteCategory(category);
-                      break;
-                  }
-                },
-              ),
-              onTap: () => _viewCategoryDetails(category),
-            ),
-          );
-        },
-      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showCategoryDialog(),
-        backgroundColor: Colors.purple,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
+        backgroundColor: ThemeManager().currentColors['primary'] as Color,
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
+      ), // FloatingActionButton
+    ); // Scaffold
   }
 }

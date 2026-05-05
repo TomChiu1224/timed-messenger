@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'services/theme_manager.dart';
+import 'package:flutter/material.dart';
 import 'firebase_service.dart';
 
 class FriendsPage extends StatefulWidget {
@@ -124,12 +125,18 @@ class _FriendsPageState extends State<FriendsPage>
     }
   }
 
+  // ✅ 切換最愛狀態
+  Future<void> _toggleFavorite(String friendUid, bool current) async {
+    await _firebaseService.toggleFavorite(friendUid, !current);
+    await _loadFriendsData();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('好友'),
-        backgroundColor: Colors.purple,
+        backgroundColor: ThemeManager().currentColors['primary'],
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -201,7 +208,7 @@ class _FriendsPageState extends State<FriendsPage>
               icon: const Icon(Icons.search),
               label: const Text('搜尋好友'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.purple,
+                backgroundColor: ThemeManager().currentColors['primary'],
                 foregroundColor: Colors.white,
               ),
             ),
@@ -223,10 +230,29 @@ class _FriendsPageState extends State<FriendsPage>
           ),
           title: Text(friend['displayName'] ?? '未知用戶'),
           subtitle: Text('@${friend['username'] ?? ''}'),
-          trailing: IconButton(
-            icon: const Icon(Icons.send, color: Colors.purple),
-            onPressed: () {},
-            tooltip: '傳訊息',
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  friend['isFavorite'] == true
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color:
+                      friend['isFavorite'] == true ? Colors.red : Colors.grey,
+                ),
+                onPressed: () => _toggleFavorite(
+                  friend['uid'],
+                  friend['isFavorite'] == true,
+                ),
+                tooltip: '加入最愛',
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.purple),
+                onPressed: () {},
+                tooltip: '傳訊息',
+              ),
+            ],
           ),
         );
       },
@@ -380,7 +406,8 @@ class _FriendsPageState extends State<FriendsPage>
                         : ElevatedButton(
                             onPressed: () => _sendFriendRequest(user['uid']),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
+                              backgroundColor:
+                                  ThemeManager().currentColors['primary'],
                               foregroundColor: Colors.white,
                             ),
                             child: const Text('加好友'),

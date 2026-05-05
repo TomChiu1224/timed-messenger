@@ -4,6 +4,7 @@ import 'privacy_policy_page.dart';
 import 'user_manager.dart';
 import 'firebase_service.dart';
 import 'services/tts_service.dart';
+import 'services/theme_manager.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -181,7 +182,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('帳號設定'),
-        backgroundColor: Colors.purple.shade600,
+        backgroundColor: ThemeManager().currentColors['primary'] as Color,
         foregroundColor: Colors.white,
       ),
       body: _isLoading
@@ -220,7 +221,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                                 icon: const Icon(Icons.edit),
                                 label: const Text('編輯個人資料'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purple.shade600,
+                                  backgroundColor: Colors.purple,
                                   foregroundColor: Colors.white,
                                 ),
                               ),
@@ -272,7 +273,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                                   child: ElevatedButton(
                                     onPressed: _saveProfile,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.purple.shade600,
+                                      backgroundColor: Colors.purple,
                                       foregroundColor: Colors.white,
                                     ),
                                     child: const Text('儲存'),
@@ -427,7 +428,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
           children: [
             CircleAvatar(
               radius: 30,
-              backgroundColor: Colors.purple.shade100,
+              backgroundColor: Colors.purple,
               backgroundImage: (_userProfile!.photoURL.isNotEmpty)
                   ? NetworkImage(_userProfile!.photoURL)
                   : null,
@@ -514,7 +515,7 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
         title: const Text('選擇主題'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: ['system', 'light', 'dark'].map((mode) {
+          children: ['system', 'light'].map((mode) {
             return RadioListTile<String>(
               title: Text(_getThemeDisplayName(mode)),
               value: mode,

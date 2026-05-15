@@ -48,6 +48,58 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718181282115:android:7efcdfcdb0f77e983cbff6",
+        "android_client_info": {
+          "package_name": "com.tomchiu.timedmessenger"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718181282115-7luo1nro7jlshsk8j7nfd46kdbh2tkih.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tomchiu.timedmessenger",
+            "certificate_hash": "a5f611b47464abb3aedb4bc0812e45ccb672aec7"
+          }
+        },
+        {
+          "client_id": "718181282115-t0i42e2vllma65vk56b7s0otdvmhqqpr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.tomchiu.timedmessenger",
+            "certificate_hash": "c9b035c55098b92e672ec97db6e489e52c60e1ef"
+          }
+        },
+        {
+          "client_id": "718181282115-qmlj8479k9vk06fi5ksciiaeo7ifi35m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArPo3fXFIDUsE3UpBShsrCxIGcUtpMx4I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718181282115-qmlj8479k9vk06fi5ksciiaeo7ifi35m.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "718181282115-k683857bsde80e6s4e7lselpsqk0i7dm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.timedmessenger.app"
+              }
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

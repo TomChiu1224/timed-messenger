@@ -23,7 +23,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.timed_messenger"
+    namespace "com.tomchiu.timedmessenger"
     compileSdk 36
     ndkVersion flutter.ndkVersion
 
@@ -41,8 +41,17 @@ android {
         main.java.srcDirs += 'src/main/kotlin'
     }
 
+    signingConfigs {
+        release {
+            keyAlias 'timed_messenger'
+            keyPassword 'Timed@2024'
+            storeFile file('C:/Users/w/Desktop/timed_messenger_key.jks')
+            storePassword 'Timed@2024'
+        }
+    }
+
     defaultConfig {
-        applicationId "com.example.timed_messenger"
+        applicationId "com.tomchiu.timedmessenger"
         minSdkVersion 24
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
@@ -52,7 +61,9 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }

@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- ✅ 網路權限（用於 Firebase 雲端同步）-->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="com.android.vending.BILLING"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
 
     <!-- ✅ 震動權限 -->
     <uses-permission android:name="android.permission.VIBRATE"/>

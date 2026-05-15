@@ -3,16 +3,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class QuotaService {
-  static const Map<String, int> _dailyLimits = {
-    'free': 6,
-    'lite': 20,
-    'plus': 50,
-    'pro': 80,
+  static const Map<String, int> _monthlyLimits = {
+    'free': 10,
+    'lite': 50,
+    'plus': 200,
+    'pro': 500,
   };
 
-  static String _getTodayKey() {
+  static String _getMonthKey() {
     final now = DateTime.now();
-    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}';
   }
 
   static Future<String> getUserTier() async {
@@ -27,21 +27,21 @@ class QuotaService {
     }
   }
 
-  static Future<int> getDailyLimit() async {
+  static Future<int> getMonthlyLimit() async {
     final tier = await getUserTier();
-    return _dailyLimits[tier] ?? 6;
+    return _monthlyLimits[tier] ?? 10;
   }
 
-  static Future<int> getTodayUsage() async {
+  static Future<int> getMonthUsage() async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return 0;
-      final todayKey = _getTodayKey();
+      final monthKey = _getMonthKey();
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .collection('quota')
-          .doc(todayKey)
+          .doc(monthKey)
           .get();
       return doc.data()?['count'] ?? 0;
     } catch (e) {
@@ -50,8 +50,8 @@ class QuotaService {
   }
 
   static Future<bool> canSendMessage() async {
-    final usage = await getTodayUsage();
-    final limit = await getDailyLimit();
+    final usage = await getMonthUsage();
+    final limit = await getMonthlyLimit();
     return usage < limit;
   }
 
@@ -59,15 +59,15 @@ class QuotaService {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
-      final todayKey = _getTodayKey();
+      final monthKey = _getMonthKey();
       final ref = FirebaseFirestore.instance
           .collection('users')
           .doc(uid)
           .collection('quota')
-          .doc(todayKey);
+          .doc(monthKey);
       await ref.set({
         'count': FieldValue.increment(1),
-        'date': todayKey,
+        'date': monthKey,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -76,8 +76,8 @@ class QuotaService {
   }
 
   static Future<Map<String, dynamic>> getQuotaInfo() async {
-    final usage = await getTodayUsage();
-    final limit = await getDailyLimit();
+    final usage = await getMonthUsage();
+    final limit = await getMonthlyLimit();
     final tier = await getUserTier();
     return {
       'usage': usage,

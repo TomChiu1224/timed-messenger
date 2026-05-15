@@ -1,6 +1,7 @@
 ﻿import 'services/theme_manager.dart';
 import 'package:flutter/material.dart';
 import 'firebase_service.dart';
+import 'report_dialog.dart';
 
 class FriendsPage extends StatefulWidget {
   const FriendsPage({super.key});
@@ -247,10 +248,32 @@ class _FriendsPageState extends State<FriendsPage>
                 ),
                 tooltip: '加入最愛',
               ),
-              IconButton(
-                icon: const Icon(Icons.send, color: Colors.purple),
-                onPressed: () {},
-                tooltip: '傳訊息',
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.grey),
+                tooltip: '更多',
+                onSelected: (value) async {
+                  if (value == 'report') {
+                    await showReportDialog(
+                      context: context,
+                      reportedUid: friend['uid'] ?? '',
+                      reportedEmail:
+                          friend['email'] ?? friend['username'] ?? '',
+                      source: 'friends_list',
+                    );
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem<String>(
+                    value: 'report',
+                    child: Row(
+                      children: [
+                        Icon(Icons.flag_outlined, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('檢舉'),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

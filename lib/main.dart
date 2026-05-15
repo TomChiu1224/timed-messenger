@@ -20,6 +20,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:intl/intl.dart';
 import 'services/audio_manager.dart'; // 之前加入的音效引用
 import 'services/vibration_manager.dart'; // 新加入的震動引用
@@ -41,6 +42,7 @@ import 'database_helper.dart';
 import 'inbox_page.dart';
 import 'user_settings_page.dart';
 import 'friends_page.dart';
+import 'groups_page.dart';
 
 // ✅ 剪貼板功能
 import 'package:flutter/services.dart';
@@ -1167,6 +1169,112 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  /// ✅ 掃描 QR Code 加入群組
+  Future<void> _scanQrCode() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    bool scanned = false;
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(
+            title: const Text('掃描群組 QR Code'),
+            backgroundColor: Colors.teal,
+            foregroundColor: Colors.white,
+          ),
+          body: MobileScanner(
+            onDetect: (capture) {
+              if (scanned) return;
+              final barcode = capture.barcodes.firstOrNull;
+              if (barcode?.rawValue != null) {
+                scanned = true;
+                Navigator.pop(context, barcode!.rawValue!);
+              }
+            },
+          ),
+        ),
+      ),
+    );
+
+    if (result == null) return;
+    if (!result.startsWith('aitchuanshi://joingroup?id=')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('❌ 這不是愛傳時群組的 QR Code')),
+        );
+      }
+      return;
+    }
+
+    final groupId = result.replaceFirst('aitchuanshi://joingroup?id=', '');
+    try {
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .get();
+      if (!groupDoc.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('❌ 找不到此群組，可能已被刪除')),
+          );
+        }
+        return;
+      }
+      final data = groupDoc.data()!;
+      final members = List<Map<String, dynamic>>.from(data['members'] ?? []);
+      final alreadyMember = members.any((m) => m['uid'] == currentUser.uid);
+      if (alreadyMember) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('你已經是「${data['name']}」的成員了')),
+          );
+        }
+        return;
+      }
+      members.add({
+        'uid': currentUser.uid,
+        'displayName': currentUser.displayName ?? '未知用戶',
+        'role': 'member',
+      });
+      await FirebaseFirestore.instance
+          .collection('groups')
+          .doc(groupId)
+          .update({'members': members});
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.teal),
+                SizedBox(width: 8),
+                Text('加入成功！'),
+              ],
+            ),
+            content: Text('你已成功加入群組「${data['name']}」！'),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white),
+                onPressed: () => Navigator.pop(context),
+                child: const Text('確定'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ 加入群組失敗: $e')),
+        );
+      }
+    }
+  }
+
   /// ✅ 開啟好友多選對話框
   Future<void> _showReceiverSelector() async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -1219,6 +1327,47 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    // 載入群組列表
+    List<Map<String, dynamic>> groupList = [];
+    try {
+      final groupSnapshot =
+          await FirebaseFirestore.instance.collection('groups').get();
+      for (final doc in groupSnapshot.docs) {
+        final data = doc.data();
+        final members = List<Map<String, dynamic>>.from(data['members'] ?? []);
+        final isMember = members.any((m) => m['uid'] == currentUser.uid);
+        if (isMember) {
+          groupList.add({
+            'id': doc.id,
+            'name': data['name'] ?? '未知群組',
+            'members': members,
+          });
+        }
+      }
+    } catch (e) {
+      print('❌ 讀取群組失敗: $e');
+    }
+
+    // 建立所有已知用戶的查找表（好友 + 群組成員）
+    final Map<String, Map<String, dynamic>> knownUsersMap = {};
+    for (final f in friendList) {
+      knownUsersMap[f['uid'] as String] = f;
+    }
+    for (final group in groupList) {
+      final members = List<Map<String, dynamic>>.from(group['members'] ?? []);
+      for (final m in members) {
+        final uid = m['uid'] as String;
+        if (!knownUsersMap.containsKey(uid)) {
+          knownUsersMap[uid] = {
+            'uid': uid,
+            'displayName': m['displayName'] ?? '未知成員',
+            'email': '',
+            'isFavorite': false,
+          };
+        }
+      }
+    }
+
     // 記錄目前已選的 uid
     List<String> tempSelectedUids =
         _selectedReceivers.map((r) => r['uid'] as String).toList();
@@ -1228,6 +1377,7 @@ class _HomePageState extends State<HomePage> {
       builder: (context) {
         String searchQuery = '';
         bool showFavoriteOnly = false;
+        bool showGroupTab = false;
         final searchController = TextEditingController();
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -1244,6 +1394,8 @@ class _HomePageState extends State<HomePage> {
               });
 
             return AlertDialog(
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
               title: const Text('選擇收件人'),
               content: SizedBox(
                 width: double.maxFinite,
@@ -1266,8 +1418,10 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Expanded(
                           child: GestureDetector(
-                            onTap: () =>
-                                setDialogState(() => showFavoriteOnly = true),
+                            onTap: () => setDialogState(() {
+                              showFavoriteOnly = true;
+                              showGroupTab = false;
+                            }),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
@@ -1303,17 +1457,19 @@ class _HomePageState extends State<HomePage> {
                         ),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () =>
-                                setDialogState(() => showFavoriteOnly = false),
+                            onTap: () => setDialogState(() {
+                              showFavoriteOnly = false;
+                              showGroupTab = false;
+                            }),
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 8),
                               decoration: BoxDecoration(
-                                color: !showFavoriteOnly
+                                color: !showFavoriteOnly && !showGroupTab
                                     ? Colors.purple.shade50
                                     : Colors.grey.shade100,
                                 border: Border(
                                     bottom: BorderSide(
-                                  color: !showFavoriteOnly
+                                  color: !showFavoriteOnly && !showGroupTab
                                       ? Colors.purple
                                       : Colors.transparent,
                                   width: 2,
@@ -1324,14 +1480,55 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Icon(Icons.people,
                                       size: 16,
-                                      color: !showFavoriteOnly
+                                      color: !showFavoriteOnly && !showGroupTab
                                           ? Colors.purple
                                           : Colors.grey),
                                   const SizedBox(width: 4),
                                   Text('全部',
                                       style: TextStyle(
-                                          color: !showFavoriteOnly
-                                              ? Colors.purple
+                                          color:
+                                              !showFavoriteOnly && !showGroupTab
+                                                  ? Colors.purple
+                                                  : Colors.grey)),
+                                ],
+                              ),
+                            ), // Container
+                          ), // GestureDetector
+                        ), // Expanded
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setDialogState(() {
+                              showFavoriteOnly = false;
+                              showGroupTab = true;
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: showGroupTab
+                                    ? Colors.teal.shade50
+                                    : Colors.grey.shade100,
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: showGroupTab
+                                        ? Colors.teal
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.group,
+                                      size: 16,
+                                      color: showGroupTab
+                                          ? Colors.teal
+                                          : Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text('群組',
+                                      style: TextStyle(
+                                          color: showGroupTab
+                                              ? Colors.teal
                                               : Colors.grey)),
                                 ],
                               ),
@@ -1339,39 +1536,149 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ],
-                    ),
+                    ), // Row
                     const SizedBox(height: 8),
                     Expanded(
-                      child: filtered.isEmpty
-                          ? const Center(
-                              child: Text('沒有符合的好友',
-                                  style: TextStyle(color: Colors.grey)))
-                          : ListView.builder(
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final friend = filtered[index];
-                                final isSelected =
-                                    tempSelectedUids.contains(friend['uid']);
-                                return CheckboxListTile(
-                                  secondary: friend['isFavorite'] == true
-                                      ? const Icon(Icons.favorite,
-                                          color: Colors.red, size: 20)
-                                      : null,
-                                  title: Text(friend['displayName']),
-                                  subtitle: Text(friend['email']),
-                                  value: isSelected,
-                                  onChanged: (checked) {
-                                    setDialogState(() {
-                                      if (checked == true) {
-                                        tempSelectedUids.add(friend['uid']);
-                                      } else {
-                                        tempSelectedUids.remove(friend['uid']);
-                                      }
-                                    });
+                      child: showGroupTab
+                          ? (groupList.isEmpty
+                              ? const Center(
+                                  child: Text('沒有群組，請先建立群組',
+                                      style: TextStyle(color: Colors.grey)))
+                              : ListView.builder(
+                                  itemCount: groupList.length,
+                                  itemBuilder: (context, index) {
+                                    final group = groupList[index];
+                                    final members =
+                                        List<Map<String, dynamic>>.from(
+                                            group['members'] ?? []);
+                                    final otherMembers = members
+                                        .where(
+                                            (m) => m['uid'] != currentUser.uid)
+                                        .toList();
+                                    final memberUids = otherMembers
+                                        .map((m) => m['uid'] as String)
+                                        .toList();
+                                    final allSelected = memberUids.isNotEmpty &&
+                                        memberUids.every((uid) =>
+                                            tempSelectedUids.contains(uid));
+                                    final someSelected = memberUids.any((uid) =>
+                                        tempSelectedUids.contains(uid));
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(
+                                          horizontal: 4, vertical: 2),
+                                      child: ExpansionTile(
+                                        leading: const Icon(Icons.group,
+                                            color: Colors.teal),
+                                        title: Text(group['name'],
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold)),
+                                        subtitle: Text(
+                                            '${otherMembers.length} 位成員${someSelected ? '　已選 ${memberUids.where((uid) => tempSelectedUids.contains(uid)).length} 人' : ''}'),
+                                        trailing: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              allSelected ? '全選' : '全選',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: allSelected
+                                                      ? Colors.teal
+                                                      : Colors.grey),
+                                            ),
+                                            Checkbox(
+                                              value: allSelected,
+                                              activeColor: Colors.teal,
+                                              onChanged: (checked) {
+                                                setDialogState(() {
+                                                  for (final uid
+                                                      in memberUids) {
+                                                    if (checked == true) {
+                                                      if (!tempSelectedUids
+                                                          .contains(uid)) {
+                                                        tempSelectedUids
+                                                            .add(uid);
+                                                      }
+                                                    } else {
+                                                      tempSelectedUids
+                                                          .remove(uid);
+                                                    }
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                        onExpansionChanged: (expanded) {
+                                          if (expanded && !someSelected) {
+                                            setDialogState(() {
+                                              for (final uid in memberUids) {
+                                                if (!tempSelectedUids
+                                                    .contains(uid)) {
+                                                  tempSelectedUids.add(uid);
+                                                }
+                                              }
+                                            });
+                                          }
+                                        },
+                                        children: otherMembers.map((member) {
+                                          final uid = member['uid'] as String;
+                                          final isSelected =
+                                              tempSelectedUids.contains(uid);
+                                          final displayName =
+                                              member['displayName'] ?? '未知成員';
+                                          return CheckboxListTile(
+                                            contentPadding:
+                                                const EdgeInsets.only(
+                                                    left: 32, right: 8),
+                                            title: Text(displayName),
+                                            value: isSelected,
+                                            activeColor: Colors.teal,
+                                            onChanged: (checked) {
+                                              setDialogState(() {
+                                                if (checked == true) {
+                                                  tempSelectedUids.add(uid);
+                                                } else {
+                                                  tempSelectedUids.remove(uid);
+                                                }
+                                              });
+                                            },
+                                          );
+                                        }).toList(),
+                                      ),
+                                    );
                                   },
-                                ); // CheckboxListTile
-                              },
-                            ),
+                                )) // ListView.builder groups
+                          : (filtered.isEmpty
+                              ? const Center(
+                                  child: Text('沒有符合的好友',
+                                      style: TextStyle(color: Colors.grey)))
+                              : ListView.builder(
+                                  itemCount: filtered.length,
+                                  itemBuilder: (context, index) {
+                                    final friend = filtered[index];
+                                    final isSelected = tempSelectedUids
+                                        .contains(friend['uid']);
+                                    return CheckboxListTile(
+                                      secondary: friend['isFavorite'] == true
+                                          ? const Icon(Icons.favorite,
+                                              color: Colors.red, size: 20)
+                                          : null,
+                                      title: Text(friend['displayName']),
+                                      subtitle: Text(friend['email']),
+                                      value: isSelected,
+                                      onChanged: (checked) {
+                                        setDialogState(() {
+                                          if (checked == true) {
+                                            tempSelectedUids.add(friend['uid']);
+                                          } else {
+                                            tempSelectedUids
+                                                .remove(friend['uid']);
+                                          }
+                                        });
+                                      },
+                                    );
+                                  },
+                                )),
                     ),
                   ],
                 ),
@@ -1383,8 +1690,9 @@ class _HomePageState extends State<HomePage> {
                 ), // TextButton
                 ElevatedButton(
                   onPressed: () {
-                    final selected = friendList
-                        .where((f) => tempSelectedUids.contains(f['uid']))
+                    final selected = tempSelectedUids
+                        .where((uid) => knownUsersMap.containsKey(uid))
+                        .map((uid) => knownUsersMap[uid]!)
                         .toList();
                     Navigator.pop(context, selected);
                   },
@@ -3262,6 +3570,18 @@ class _HomePageState extends State<HomePage> {
                   );
                   break;
 
+                case 'groups':
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GroupsPage(),
+                    ), // MaterialPageRoute
+                  );
+                  break;
+                case 'scan_qr':
+                  _scanQrCode();
+                  break;
+
                 case 'info':
                   _showAppInfo();
                   break;
@@ -3319,7 +3639,24 @@ class _HomePageState extends State<HomePage> {
                   title: Text('好友'),
                   contentPadding: EdgeInsets.zero,
                 ),
-              ),
+              ), // PopupMenuItem
+
+              const PopupMenuItem<String>(
+                value: 'groups',
+                child: ListTile(
+                  leading: Icon(Icons.group, color: Colors.teal),
+                  title: Text('群組'),
+                  contentPadding: EdgeInsets.zero,
+                ), // ListTile
+              ), // PopupMenuItem // PopupMenuItem
+              const PopupMenuItem<String>(
+                value: 'scan_qr',
+                child: ListTile(
+                  leading: Icon(Icons.qr_code_scanner, color: Colors.teal),
+                  title: Text('掃描加入群組'),
+                  contentPadding: EdgeInsets.zero,
+                ), // ListTile
+              ), // PopupMenuItem
 
               const PopupMenuItem<String>(
                 value: 'account',

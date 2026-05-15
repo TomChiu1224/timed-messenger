@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'firebase_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'voice_message_service.dart';
-import 'services/theme_manager.dart';
+import 'report_dialog.dart';
 
 class InboxPage extends StatefulWidget {
   const InboxPage({super.key});
@@ -273,7 +273,39 @@ class _InboxPageState extends State<InboxPage>
         bool _isPlaying = false;
         return StatefulBuilder(
           builder: (context, setDialogState) => AlertDialog(
-            title: Text('來自 ${msg['senderName'] ?? '未知用戶'}'),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '來自 ${msg['senderName'] ?? '未知用戶'}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.flag_outlined, color: Colors.red),
+                  tooltip: '檢舉',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () async {
+                    final senderId = msg['senderId'] as String? ?? '';
+                    final senderName = msg['senderName'] as String? ?? '';
+                    if (senderId.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('無法檢舉：找不到發訊者資訊')),
+                      );
+                      return;
+                    }
+                    await showReportDialog(
+                      context: context,
+                      reportedUid: senderId,
+                      reportedEmail: senderName,
+                      source: 'message_detail',
+                      messageId: docId,
+                    );
+                  },
+                ),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

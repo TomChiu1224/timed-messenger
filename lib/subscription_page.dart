@@ -144,7 +144,8 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
 
   Widget _buildPlanCard(SubscriptionPlan plan, SubscriptionTier currentTier) {
     final isCurrent = plan.tier == currentTier;
-    final isUpgrade = plan.tierLevel > SubscriptionPlan.getPlan(currentTier).tierLevel;
+    final isUpgrade =
+        plan.tierLevel > SubscriptionPlan.getPlan(currentTier).tierLevel;
 
     return Card(
       elevation: isCurrent ? 4 : 2,
@@ -244,7 +245,6 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     }
 
     if (plan.hasAdsRemoved) features.add('移除廣告');
-    if (plan.hasAdvancedNotifications) features.add('進階通知');
     if (plan.hasCloudSync) features.add('雲端同步');
     if (plan.hasMultipleTimezones) features.add('多時區支援');
     if (plan.hasDataExport) features.add('資料匯出');
@@ -282,14 +282,13 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
               ),
             ),
             const SizedBox(height: 16),
-            _buildComparisonRow('訊息數量', ['10', '50', '200', '無限']),
-            _buildComparisonRow('分類數量', ['3', '10', '30', '無限']),
+            _buildComparisonRow('訊息數量', ['10', '50', '200', '500']),
+            _buildComparisonRow('分類數量', ['3', '10', '30', '60']),
             _buildComparisonRow('移除廣告', [false, true, true, true]),
-            _buildComparisonRow('進階通知', [false, true, true, true]),
-            _buildComparisonRow('雲端同步', [false, false, true, true]),
-            _buildComparisonRow('多時區', [false, false, true, true]),
+            _buildComparisonRow('雲端同步', [false, true, true, true]),
+            _buildComparisonRow('多時區', [true, true, true, true]),
             _buildComparisonRow('資料匯出', [false, true, true, true]),
-            _buildComparisonRow('自訂主題', [false, false, true, true]),
+            _buildComparisonRow('自訂主題', [false, true, true, true]),
           ],
         ),
       ),

@@ -555,4 +555,40 @@ class FirebaseService {
       return false;
     }
   }
+
+  /// 建立群組
+  Future<String?> createGroup({
+    required String name,
+    required List<Map<String, dynamic>> members,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+      final docRef = await FirebaseFirestore.instance.collection('groups').add({
+        'name': name,
+        'creatorId': user.uid,
+        'members': members,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (e) {
+      print('❌ 建立群組失敗: $e');
+      return null;
+    }
+  }
+
+  /// 取得我的群組列表
+  Future<List<Map<String, dynamic>>> getMyGroups() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return [];
+      final snapshot = await FirebaseFirestore.instance
+          .collection('groups')
+          .where('members', arrayContains: {'uid': user.uid}).get();
+      return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
+    } catch (e) {
+      print('❌ 取得群組列表失敗: $e');
+      return [];
+    }
+  }
 }

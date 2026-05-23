@@ -278,7 +278,8 @@ class _HomePageState extends State<HomePage> {
     });
 
     // ✅ 保持完整的 Timer 邏輯（整合音效+震動播放）
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _mainTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
       final now = DateTime.now();
 
       // 每日清晨：重設 sent 標記
@@ -484,6 +485,13 @@ class _HomePageState extends State<HomePage> {
         }
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _badgeTimer?.cancel();
+    _mainTimer?.cancel();
+    super.dispose();
   }
 
   // ✅ 從資料庫載入訊息的方法（加入過期任務處理）

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'privacy_policy_page.dart';
 import 'user_manager.dart';
 import 'firebase_service.dart';
 import 'services/tts_service.dart';
 import 'services/theme_manager.dart';
+import 'login_page.dart';
 
 class UserSettingsPage extends StatefulWidget {
   const UserSettingsPage({super.key});
@@ -95,7 +97,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
       displayName: _displayNameController.text.trim(),
     );
 
-    // ✅ 同步儲存到 Firestore
     if (success) {
       final uid = _firebaseService.getUserId();
       if (uid != null) {
@@ -151,6 +152,183 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
     );
   }
 
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('刪除帳號'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '此操作會永久刪除以下資料，且無法復原：',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text('• 您的個人資料'),
+              Text('• 所有好友關係'),
+              Text('• 所有寄出和收到的訊息'),
+              Text('• 所有上傳的圖片和語音'),
+              Text('• 訂閱方案資料'),
+              SizedBox(height: 12),
+              Text(
+                '您確定要繼續嗎？',
+                style:
+                    TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showFinalConfirmDialog();
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('我了解，繼續'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFinalConfirmDialog() {
+    final TextEditingController confirmController = TextEditingController();
+    bool canDelete = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('最終確認'),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('請輸入「刪除帳號」以確認此操作：'),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmController,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  hintText: '刪除帳號',
+                ),
+                onChanged: (value) {
+                  setDialogState(() {
+                    canDelete = value.trim() == '刪除帳號';
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              onPressed: canDelete
+                  ? () {
+                      Navigator.pop(context);
+                      _performDeleteAccount();
+                    }
+                  : null,
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('永久刪除'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performDeleteAccount() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('正在刪除您的帳號和所有資料...'),
+            SizedBox(height: 8),
+            Text(
+              '請勿關閉應用程式',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable(
+        'deleteUserAccount',
+        options: HttpsCallableOptions(timeout: const Duration(minutes: 9)),
+      );
+      await callable.call();
+
+      if (!mounted) return;
+
+      // 立刻跳轉到登入頁，避免首頁讀到已被刪除的 user 而崩潰
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+        (route) => false,
+      );
+
+      // 跳轉後再顯示成功訊息（在登入頁的 Scaffold 上）
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ 帳號已成功刪除'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ 刪除失敗：${e.message ?? "未知錯誤"}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('🔥 刪除帳號崩潰: $e');
+      debugPrint('🔥 Stack trace: $stackTrace');
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ 發生錯誤：$e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ), // SnackBar
+      );
+    }
+  }
+
   Future<void> _updateNotificationSetting(bool enabled) async {
     await _userManager.setNotificationEnabled(enabled);
     setState(() => _notificationEnabled = enabled);
@@ -192,11 +370,8 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ✅ 用戶資訊卡片
                   if (_userProfile != null) _buildUserInfoCard(),
                   const SizedBox(height: 16),
-
-                  // ✅ 個人資料設定
                   _buildSectionTitle('個人資料設定'),
                   Card(
                     elevation: 2,
@@ -205,7 +380,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 目前設定顯示
                           if (!_isEditingProfile) ...[
                             _buildInfoRow(Icons.badge, '用戶名稱',
                                 _username.isEmpty ? '尚未設定' : '@$_username'),
@@ -227,7 +401,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                               ),
                             ),
                           ] else ...[
-                            // 編輯模式
                             TextField(
                               controller: _displayNameController,
                               decoration: const InputDecoration(
@@ -287,8 +460,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // 應用程式設定
                   _buildSectionTitle('應用程式設定'),
                   Card(
                     elevation: 2,
@@ -315,8 +486,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // 訊息接收偏好
                   _buildSectionTitle('訊息接收偏好'),
                   Card(
                     elevation: 2,
@@ -359,8 +528,6 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  // 帳號管理
                   if (_firebaseService.isSignedIn) ...[
                     _buildSectionTitle('帳號管理'),
                     Card(
@@ -376,13 +543,21 @@ class _UserSettingsPageState extends State<UserSettingsPage> {
                             trailing: const Icon(Icons.chevron_right),
                             onTap: _showSignOutDialog,
                           ),
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.delete_forever,
+                                color: Colors.red),
+                            title: const Text('刪除帳號',
+                                style: TextStyle(color: Colors.red)),
+                            subtitle: const Text('永久刪除帳號和所有資料'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: _showDeleteAccountDialog,
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
                   ],
-
-                  // 關於
                   _buildSectionTitle('關於'),
                   Card(
                     elevation: 2,

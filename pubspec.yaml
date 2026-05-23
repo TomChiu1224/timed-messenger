@@ -1,7 +1,7 @@
 name: timed_messenger
 description: 愛傳時定時訊息App - 支援多時區、音效震動、分類管理、主題自訂的完整版本
 publish_to: 'none'
-version: 1.4.0+7
+version: 1.4.1+8
 environment:
   sdk: '>=3.0.0 <4.0.0'
 dependencies:
@@ -50,6 +50,7 @@ dependencies:
   flutter_tts: ^4.2.0
   # ========== 前景服務（背景語音播放）==========
   flutter_foreground_task: ^8.16.0
+  cloud_functions: ^5.6.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

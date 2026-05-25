@@ -216,6 +216,89 @@
 
   .contact-card a:hover { color: white; }
 
+  /* === 新增: 刪除帳戶區塊專用樣式 === */
+  .method-box {
+    background: #fff;
+    border: 1px solid #e9d5ff;
+    border-left: 4px solid var(--purple-light);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-top: 16px;
+  }
+
+  .method-title {
+    font-family: 'Noto Serif TC', serif;
+    color: var(--purple-mid);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .steps-list {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+  }
+
+  .steps-list li {
+    counter-increment: step;
+    padding: 8px 0 8px 38px;
+    position: relative;
+    border-bottom: 1px solid #f0ebff;
+    font-size: 0.93rem;
+  }
+
+  .steps-list li:last-child { border-bottom: none; }
+
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--purple-mid), var(--purple-light));
+    color: white;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+  }
+
+  .email-highlight {
+    background: var(--purple-pale);
+    border: 2px dashed var(--purple-light);
+    border-radius: 12px;
+    padding: 12px 20px;
+    text-align: center;
+    font-size: 1rem;
+    color: var(--purple-dark);
+    margin: 12px 0;
+    font-weight: 500;
+  }
+
+  .warning-box {
+    background: #fef2f2;
+    border-left: 4px solid #dc2626;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-top: 14px;
+    color: #991b1b;
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .note-text {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-top: 10px;
+    line-height: 1.7;
+  }
+
   footer {
     text-align: center;
     padding: 32px 24px;
@@ -237,7 +320,7 @@
   <div class="app-icon">⏰💜</div>
   <h1>愛傳時 TimedMessenger</h1>
   <div class="subtitle">隱私權政策 Privacy Policy</div>
-  <div class="update-date">最後更新：2025 年 7 月</div>
+  <div class="update-date">最後更新：2026 年 5 月</div>
 </header>
 
 <main>
@@ -327,7 +410,7 @@
     </div>
     <p>您隨時可以：</p>
     <ul>
-      <li>刪除您的帳號及所有相關資料</li>
+      <li>刪除您的帳號及所有相關資料（詳見下方第七節）</li>
       <li>要求我們提供您的個人資料副本</li>
       <li>要求我們更正或刪除您的個人資料</li>
       <li>撤回對資料處理的同意</li>
@@ -337,6 +420,59 @@
   <section>
     <div class="section-header">
       <div class="section-num">七</div>
+      <h2>如何刪除您的帳戶</h2>
+    </div>
+    <p>您隨時可以刪除您的「愛傳時」帳戶，並一併刪除所有相關資料。我們提供兩種方式讓您完成這個操作：</p>
+
+    <div class="method-box">
+      <div class="method-title">📱 方式一：在 App 內直接刪除（建議）</div>
+      <p>請依以下步驟操作：</p>
+      <ol class="steps-list">
+        <li>開啟「愛傳時」App，點擊右上角的選單按鈕（☰）</li>
+        <li>選擇「<strong>帳號設定</strong>」</li>
+        <li>往下捲動至「<strong>帳號管理</strong>」區塊</li>
+        <li>點擊紅色的「<strong>刪除帳號</strong>」（永久刪除帳號和所有資料）</li>
+        <li>閱讀刪除資料的說明，點擊「<strong>我了解，繼續</strong>」</li>
+        <li>在確認對話框中輸入「<strong>刪除帳號</strong>」四個字，點擊「<strong>永久刪除</strong>」</li>
+      </ol>
+      <p class="note-text">系統會在約 5-10 秒內完成刪除作業，完成後 App 會自動跳回登入畫面。</p>
+    </div>
+
+    <div class="method-box">
+      <div class="method-title">📧 方式二：透過電子郵件申請刪除</div>
+      <p>如果您無法登入您的帳戶，或在 App 內無法完成刪除，請寄信至：</p>
+      <div class="email-highlight">
+        maddox013190@gmail.com
+      </div>
+      <p>來信請註明：</p>
+      <ul>
+        <li>主旨「<strong>申請刪除愛傳時帳戶</strong>」</li>
+        <li>內文附上您註冊時使用的 Google 帳戶 Email</li>
+      </ul>
+      <p class="note-text">我們會在收到信件後 <strong>7 個工作天內</strong>完成帳戶刪除，並回信確認。</p>
+    </div>
+
+    <div class="method-box">
+      <div class="method-title">🗑️ 刪除帳戶後，以下資料將被永久清除</div>
+      <ul>
+        <li>您的個人資料（顯示名稱、用戶名稱、手機號碼）</li>
+        <li>您的 Google 帳戶在「愛傳時」服務中的登入記錄</li>
+        <li>所有您建立的排程訊息（包含尚未送出的）</li>
+        <li>所有您寄出和收到的訊息（文字、語音、圖片）</li>
+        <li>所有好友關係及好友申請記錄</li>
+        <li>所有群組成員資格</li>
+        <li>您的訂閱方案資料</li>
+        <li>本機端儲存的所有應用程式資料</li>
+      </ul>
+      <div class="warning-box">
+        ⚠️ <strong>此操作無法復原。</strong>刪除完成後，所有資料將立即從我們的雲端伺服器（Google Firebase）永久移除，無法恢復。
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <div class="section-num">八</div>
       <h2>兒童隱私</h2>
     </div>
     <p>本 App 不針對 13 歲以下兒童提供服務。我們不會故意收集兒童的個人資料。若您發現有未成年人使用本服務，請聯繫我們。</p>
@@ -344,7 +480,7 @@
 
   <section>
     <div class="section-header">
-      <div class="section-num">八</div>
+      <div class="section-num">九</div>
       <h2>聯絡我們</h2>
     </div>
     <p>如果您對本隱私權政策有任何疑問，請透過以下方式聯繫我們：</p>
@@ -357,7 +493,7 @@
 </main>
 
 <footer>
-  © 2025 愛傳時 TimedMessenger．保留所有權利
+  © 2026 愛傳時 TimedMessenger．保留所有權利
 </footer>
 
 </body>

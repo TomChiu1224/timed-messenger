@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>愛傳時 使用說明</title>
+  <style>
+    :root {
+      --primary: #7C6BAF;
+      --primary-dark: #5E4E8C;
+      --bg: #F5F3F9;
+      --text: #333333;
+      --card: #FFFFFF;
+      --highlight: #EFEAF8;
+      --warning-bg: #FDECEC;
+      --warning-border: #D9534F;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Microsoft JhengHei", "PingFang TC", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1.9;
+    }
+    .topbar {
+      background-color: var(--primary);
+      color: white;
+      text-align: center;
+      padding: 18px 16px;
+      font-size: 22px;
+      font-weight: bold;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 20px 60px 20px;
+    }
+    .intro-hint {
+      text-align: center;
+      color: var(--primary-dark);
+      font-size: 19px;
+      margin-bottom: 20px;
+    }
+    .acc-item {
+      background-color: var(--card);
+      border-radius: 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      overflow: hidden;
+    }
+    .acc-header {
+      width: 100%;
+      text-align: left;
+      background-color: var(--card);
+      color: var(--primary-dark);
+      font-size: 21px;
+      font-weight: bold;
+      font-family: inherit;
+      border: none;
+      padding: 20px 20px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .acc-header:hover {
+      background-color: var(--highlight);
+    }
+    .acc-header:active {
+      background-color: var(--primary);
+      color: white;
+    }
+    .acc-header .arrow {
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+    .acc-item.open .acc-header {
+      background-color: var(--primary);
+      color: white;
+    }
+    .acc-item.open .acc-header .arrow {
+      transform: rotate(180deg);
+    }
+    .acc-panel {
+      display: none;
+      padding: 8px 22px 28px 22px;
+    }
+    .acc-item.open .acc-panel {
+      display: block;
+    }
+    .acc-panel p {
+      margin-bottom: 16px;
+    }
+    .intro-list {
+      list-style: none;
+      margin-top: 10px;
+    }
+    .intro-list li {
+      padding: 12px 16px;
+      background-color: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .feature-box {
+      background-color: var(--highlight);
+      border-left: 6px solid var(--primary);
+      border-radius: 8px;
+      padding: 18px 18px;
+      margin: 18px 0;
+    }
+    .feature-box .feature-title {
+      color: var(--primary-dark);
+      font-weight: bold;
+      font-size: 21px;
+      margin-bottom: 8px;
+    }
+    .mode-list {
+      list-style: none;
+      margin-top: 10px;
+    }
+    .mode-list li {
+      padding: 12px 16px;
+      background-color: var(--bg);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .mode-list li b {
+      color: var(--primary-dark);
+    }
+    .warning-box {
+      background-color: var(--warning-bg);
+      border-left: 6px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 18px 18px;
+      margin: 18px 0;
+    }
+    .warning-box .warning-title {
+      color: var(--warning-border);
+      font-weight: bold;
+      font-size: 21px;
+      margin-bottom: 8px;
+    }
+    .step {
+      background-color: var(--bg);
+      border-radius: 8px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+    .step .step-num {
+      display: inline-block;
+      background-color: var(--primary);
+      color: white;
+      width: 34px;
+      height: 34px;
+      line-height: 34px;
+      text-align: center;
+      border-radius: 50%;
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    .screenshot-placeholder {
+      background-color: #EEEEEE;
+      border: 2px dashed #BBBBBB;
+      border-radius: 8px;
+      color: #999999;
+      text-align: center;
+      padding: 50px 20px;
+      margin: 16px 0;
+      font-size: 18px;
+    }
+    .coming-soon {
+      color: #999999;
+      text-align: center;
+      padding: 30px 10px;
+      font-size: 19px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">愛傳時 使用說明</div>
+
+  <div class="container">
+
+    <p class="intro-hint">點選下方項目，展開該段教學</p>
+
+    <div class="acc-item">
+      <button class="acc-header">1. 歡迎使用愛傳時 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>愛傳時是一款可以「預約時間、自動送出訊息」的手機 App。</p>
+        <p>您可以事先寫好一則訊息，設定好要送出的時間，時間一到，App 就會自動把訊息送到對方手機，並提醒對方查看。</p>
+        <div class="feature-box">
+          <div class="feature-title">這個 App 最特別的地方</div>
+          <p style="margin-bottom:0;">您可以用自己的手機，幫「另一個人的手機」設定提醒。時間一到，對方的手機不只會收到訊息，還可以「開口說話」念出來，讓對方就算沒在看手機，也能聽到提醒。</p>
+        </div>
+        <p>提醒時的「說話」有兩種方式：</p>
+        <ul class="mode-list">
+          <li><b>方式一：手機自動念出文字</b><br>您打什麼字，手機就用語音把它念出來。</li>
+          <li><b>方式二：播放您的錄音</b><br>您先用自己的聲音錄一段話，時間到就播放您本人的錄音。</li>
+        </ul>
+        <p>它可以幫您做這些事：</p>
+        <ul class="intro-list">
+          <li>每天早上自動傳「早安」給家人</li>
+          <li>提醒長輩按時吃藥，手機會出聲念出來</li>
+          <li>預約生日祝福，當天自動送出</li>
+          <li>傳文字、語音、圖片都可以</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">2. 重要！手機設定（請先看） <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>在開始使用前，請務必先看這一段。如果這個設定沒有調整好，可能會發生「時間到了，提醒卻沒有聲音」的情況。</p>
+        <div class="warning-box">
+          <div class="warning-title">為什麼提醒會沒聲音？</div>
+          <p style="margin-bottom:0;">手機本身有兩個設定的權力比 App 還大：「勿擾模式」和「會議模式」。只要這兩個其中一個是開著的，手機就會自動把所有提醒聲音關掉，包括愛傳時的提醒。所以我們要先確認它們有沒有擋住提醒。</p>
+        </div>
+        <p><b>什麼是勿擾模式 / 會議模式？</b></p>
+        <p>這是手機內建的「安靜功能」。開啟後，手機收到任何通知都不會出聲、不會震動，避免打擾您。但這也會讓愛傳時的提醒變得安靜，對方就聽不到了。</p>
+        <p><b>怎麼檢查與關閉？（通用做法）</b></p>
+        <div class="step"><span class="step-num">1</span>打開手機的「設定」</div>
+        <div class="step"><span class="step-num">2</span>在設定最上方的搜尋欄，輸入「勿擾」或「請勿打擾」</div>
+        <div class="step"><span class="step-num">3</span>點進去後，確認它是「關閉」的狀態</div>
+        <div class="step"><span class="step-num">4</span>用同樣方式搜尋「會議」或「會議模式」，也確認它是關閉的</div>
+        <p style="margin-top:20px;"><b>實際畫面範例（以下為參考）：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放手機設定的截圖）</div>
+        <p style="font-size:18px; color:#777;">提醒：不同廠牌手機（小米、三星、OPPO、華碩等）的設定位置略有不同，但都可以在「設定」裡用搜尋找到「勿擾」這兩個字。</p>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">3. 登入 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>愛傳時使用您的 Google 帳號登入，不需要另外申請新帳號、也不用記新的密碼，很方便。</p>
+        <div class="step"><span class="step-num">1</span>打開愛傳時 App</div>
+        <div class="step"><span class="step-num">2</span>點畫面上的「使用 Google 帳號登入」按鈕</div>
+        <div class="step"><span class="step-num">3</span>從跳出的清單中，選擇您要使用的 Google 帳號</div>
+        <div class="step"><span class="step-num">4</span>看到主畫面，就代表登入成功了</div>
+        <p style="margin-top:20px;"><b>登入畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放登入畫面的截圖）</div>
+        <div class="feature-box">
+          <div class="feature-title">小提醒</div>
+          <p style="margin-bottom:0;">如果您的手機裡有好幾個 Google 帳號，請記得選擇您平常常用的那一個。之後每次打開 App 都會自動用這個帳號，不用再登入一次。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">4. 加好友 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>要把訊息傳給某個人之前，要先把對方加為好友。加好友需要對方「同意」，是雙方都要按的，這樣比較安全。</p>
+        <div class="step"><span class="step-num">1</span>在主畫面右上角點開選單，選擇「好友」</div>
+        <div class="step"><span class="step-num">2</span>進入好友頁面後，點上方的「搜尋」</div>
+        <div class="step"><span class="step-num">3</span>在欄位輸入對方的「用戶名稱」或「手機號碼」</div>
+        <div class="step"><span class="step-num">4</span>找到對方後，送出好友邀請</div>
+        <div class="step"><span class="step-num">5</span>等對方同意後，對方就會出現在您的「好友」清單裡</div>
+        <p style="margin-top:20px;"><b>搜尋畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放搜尋好友的截圖）</div>
+        <div class="feature-box">
+          <div class="feature-title">如果是「別人加您」</div>
+          <p style="margin-bottom:0;">當有人想加您為好友，會出現在好友頁面上方的「申請」裡。點進去同意，就完成了。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">5. 傳第一則訊息 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>學會傳第一則文字訊息，您就掌握了愛傳時最核心的功能。其他語音、圖片的做法都很類似。</p>
+        <p>打開 App 看到的主畫面，最上面那張卡片叫「新增排程」，就是在這裡設定訊息。</p>
+        <div class="step"><span class="step-num">1</span>確認最上面選的是「文字」（點一下就會變成紫色）</div>
+        <div class="step"><span class="step-num">2</span>在「請輸入訊息內容」的框裡，打上您想傳的話</div>
+        <div class="step"><span class="step-num">3</span>點「選擇時間」，設定要在哪一天、幾點送出</div>
+        <div class="step"><span class="step-num">4</span>點「選擇收件人」，從好友清單中勾選要傳給誰</div>
+        <div class="step"><span class="step-num">5</span>最後點下方紫色的「確認新增」按鈕</div>
+        <p>完成後，這則訊息就會出現在畫面下方的「排程列表」裡，時間一到就會自動送出。</p>
+        <p style="margin-top:20px;"><b>主畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放主畫面的截圖）</div>
+        <div class="feature-box">
+          <div class="feature-title">小提醒</div>
+          <p style="margin-bottom:0;">中間那個「進階設定」可以先不用管它，直接跳過。等您熟悉之後，再到第 8 段了解它能做什麼。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">6. 語音訊息 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>愛傳時有兩種跟「聲音」有關的玩法，分開說明：</p>
+
+        <p style="font-size:22px; color:var(--primary-dark); font-weight:bold; margin-top:24px;">第一種：傳一段您的錄音</p>
+        <p>您先用自己的聲音錄一段話，時間到，對方就會聽到您本人的錄音。</p>
+        <div class="step"><span class="step-num">1</span>在主畫面上方，點「語音」</div>
+        <div class="step"><span class="step-num">2</span>點中間的紫色麥克風，下方寫著「點擊開始錄音」</div>
+        <div class="step"><span class="step-num">3</span>對著手機說話，錄好後再點一次停止</div>
+        <div class="step"><span class="step-num">4</span>點「選擇時間」設定送出時間</div>
+        <div class="step"><span class="step-num">5</span>點「選擇收件人」勾選要傳給誰</div>
+        <div class="step"><span class="step-num">6</span>最後點「確認新增」</div>
+        <p style="margin-top:20px;"><b>錄音畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放錄音畫面的截圖）</div>
+
+        <p style="font-size:22px; color:var(--primary-dark); font-weight:bold; margin-top:32px;">第二種：讓收到的文字自動念出來</p>
+        <p>這是傳一般的「文字訊息」，但讓對方的手機在收到時，自動用語音把文字念出來。</p>
+        <div class="feature-box">
+          <div class="feature-title">重要觀念</div>
+          <p style="margin-bottom:0;">要不要把文字念出來，是由「收到訊息的人」自己決定的。所以這個設定，要請對方在他自己的手機上開啟。</p>
+        </div>
+        <p><b>請對方在他的手機這樣設定：</b></p>
+        <div class="step"><span class="step-num">1</span>點主畫面右上角的選單，選「帳號設定」</div>
+        <div class="step"><span class="step-num">2</span>找到「訊息接收偏好」這一區</div>
+        <div class="step"><span class="step-num">3</span>點「文字訊息收到時」</div>
+        <div class="step"><span class="step-num">4</span>在跳出的視窗中，選「朗讀模式」</div>
+        <p>設定完成後，以後這支手機收到文字訊息，就會自動把內容念出來。</p>
+        <div class="feature-box">
+          <div class="feature-title">三種模式是什麼意思</div>
+          <p style="margin-bottom:0;">通知模式：照一般方式提醒（預設）。<br>朗讀模式：自動把文字念出來。<br>靜音模式：收到時不出聲。</p>
+        </div>
+        <p style="margin-top:20px;"><b>設定畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放「文字訊息收到時」設定的截圖）</div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">7. 圖片訊息 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>您也可以預約傳一張照片給對方，例如傳一張全家福、或一張寫著叮嚀的圖。做法跟傳文字很像。</p>
+        <div class="step"><span class="step-num">1</span>在主畫面上方，點「圖片」</div>
+        <div class="step"><span class="step-num">2</span>點藍色的「選擇圖片」按鈕，從手機相簿裡挑一張照片</div>
+        <div class="step"><span class="step-num">3</span>點「選擇時間」設定送出時間</div>
+        <div class="step"><span class="step-num">4</span>點「選擇收件人」勾選要傳給誰</div>
+        <div class="step"><span class="step-num">5</span>最後點「確認新增」</div>
+        <p>時間一到，對方就會收到這張照片。</p>
+        <p style="margin-top:20px;"><b>圖片畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放選圖畫面的截圖）</div>
+        <div class="feature-box">
+          <div class="feature-title">小提醒</div>
+          <p style="margin-bottom:0;">每天能傳的圖片數量有限制（免費版每天 3 張）。如果需要傳更多，可以參考第 9 段的訂閱方案。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">8. 進階設定 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>進階設定是給想要更多控制的人用的。如果您只是要傳一般訊息，這一段可以先跳過，不影響使用。</p>
+        <p>在主畫面點「進階設定（時區、音效、震動、重複）」就會展開，裡面有這幾項：</p>
+
+        <div class="step"><span class="step-num">1</span><b>選擇時區</b><br>預設是台灣時間。如果您要傳給國外的親友，可以改成對方所在地的時間。</div>
+        <div class="step"><span class="step-num">2</span><b>選擇分類</b><br>可以幫訊息分類整理（例如家人、工作），方便日後查找。不設定也沒關係。</div>
+        <div class="step"><span class="step-num">3</span><b>音效設定</b><br>設定提醒時要用哪種聲音、音量多大。</div>
+        <div class="step"><span class="step-num">4</span><b>震動設定</b><br>設定提醒時手機要不要震動、震多強。</div>
+        <div class="step"><span class="step-num">5</span><b>重複模式</b><br>預設是「不重複」（只送一次）。可以改成每天、每週重複，例如「每天早上提醒吃藥」。</div>
+
+        <p style="margin-top:20px;"><b>進階設定畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放進階設定展開的截圖）</div>
+
+        <div class="feature-box">
+          <div class="feature-title">最實用的一項</div>
+          <p style="margin-bottom:0;">對長輩照護最好用的是「重複模式」。設成每天重複，就不用每天手動設定，App 會自動天天提醒。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">9. 訂閱方案 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <p>愛傳時一開始就能免費使用，免費版對大部分人來說已經夠用。如果您需要傳更多訊息，可以再考慮升級。</p>
+
+        <div class="step"><span class="step-num">免費</span><b>Free 免費版（NT$0）</b><br>每天最多 10 則訊息、3 個分類，基本功能都有。適合輕度使用。</div>
+        <div class="step"><span class="step-num">＄</span><b>Lite 輕量版（NT$30／月）</b><br>訊息增加到 50 則、移除廣告、可雲端同步。</div>
+        <div class="step"><span class="step-num">＄</span><b>Plus 進階版（NT$60／月）</b><br>訊息增加到 200 則、分類更多。</div>
+        <div class="step"><span class="step-num">＄</span><b>Pro 專業版（NT$120／月）</b><br>訊息最多 500 則，完整功能。適合重度使用。</div>
+
+        <div class="feature-box">
+          <div class="feature-title">怎麼升級？</div>
+          <p style="margin-bottom:0;">在主畫面右上角的選單，點「訂閱方案」，就能看到所有方案和完整的功能比較表，選好按「升級」即可。</p>
+        </div>
+
+        <p style="margin-top:20px;"><b>訂閱方案畫面範例：</b></p>
+        <div class="screenshot-placeholder">（這裡之後放訂閱方案頁的截圖）</div>
+
+        <p style="font-size:18px; color:#777;">提醒：實際價格與功能以 App 內「訂閱方案」頁面顯示為準。</p>
+      </div>
+    </div>
+
+    <div class="acc-item">
+      <button class="acc-header">10. 常見問題 <span class="arrow">▾</span></button>
+      <div class="acc-panel">
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：時間到了，怎麼都沒有聲音？</b></p>
+          <p style="margin-bottom:0;">答：最常見的原因是手機開了「勿擾模式」或「會議模式」。請回到第 2 段，照步驟確認這兩個有沒有關掉。</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：為什麼我傳訊息給對方，對方收不到？</b></p>
+          <p style="margin-bottom:0;">答：請確認您和對方已經是「好友」（雙方都要同意），而且您送出時有勾選對方為收件人。</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：我打的文字，怎麼讓對方手機自動念出來？</b></p>
+          <p style="margin-bottom:0;">答：這要對方在他自己的手機設定。請對方到「帳號設定 → 文字訊息收到時 → 朗讀模式」。詳見第 6 段。</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：要怎麼設定每天自動提醒（例如提醒吃藥）？</b></p>
+          <p style="margin-bottom:0;">答：新增訊息時，打開「進階設定」，把「重複模式」改成每天。這樣就會天天自動提醒，不用每天手動設定。</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：免費版會不會不夠用？要付費嗎？</b></p>
+          <p style="margin-bottom:0;">答：免費版每天可以傳 10 則訊息，一般家庭使用通常夠用。除非您需要傳很多，才需要考慮升級。</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：我換了新手機，資料還在嗎？</b></p>
+          <p style="margin-bottom:0;">答：只要用同一個 Google 帳號登入，您的好友和設定都會在。（雲端同步為付費版功能，詳見第 9 段。）</p>
+        </div>
+        <div class="step">
+          <p style="margin-bottom:6px;"><b>問：還有問題，要找誰？</b></p>
+          <p style="margin-bottom:0;">答：可以來信詢問：maddox013190@gmail.com</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    var headers = document.querySelectorAll('.acc-header');
+    for (var i = 0; i < headers.length; i++) {
+      headers[i].addEventListener('click', function () {
+        var item = this.parentElement;
+        var wasOpen = item.classList.contains('open');
+        var allItems = document.querySelectorAll('.acc-item');
+        for (var j = 0; j < allItems.length; j++) {
+          allItems[j].classList.remove('open');
+        }
+        if (!wasOpen) {
+          item.classList.add('open');
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>

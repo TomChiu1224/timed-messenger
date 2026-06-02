@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>愛傳時 — 白名單管理</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #ffffff;
+    --ink: #2b2b33;
+    --ink-soft: #6b6b78;
+    --line: #e4e0d6;
+    --accent: #6a3fb5;
+    --accent-dark: #512e8f;
+    --accent-soft: #efe9fb;
+    --green: #2e9e5b;
+    --green-soft: #e6f5ec;
+    --red: #d23b3b;
+    --red-soft: #fbeaea;
+    --amber: #c98a1b;
+    --shadow: 0 4px 20px rgba(60,50,90,0.08);
+    --radius: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 17px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  header.top {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 28px;
+  }
+  header.top .logo {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 900; font-size: 22px;
+    box-shadow: var(--shadow);
+  }
+  header.top h1 { font-size: 24px; font-weight: 900; letter-spacing: .5px; }
+  header.top p { font-size: 14px; color: var(--ink-soft); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 28px;
+    box-shadow: var(--shadow); margin-bottom: 22px;
+  }
+  .card h2 { font-size: 19px; font-weight: 700; margin-bottom: 18px; }
+
+  .btn {
+    font-family: inherit; font-size: 17px; font-weight: 700;
+    border: none; border-radius: 12px; padding: 14px 22px;
+    cursor: pointer; transition: transform .05s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-google {
+    background: #fff; color: #3c4043; border: 1px solid #dadce0;
+    display: inline-flex; align-items: center; gap: 12px; font-size: 18px;
+  }
+  .btn-google:hover { box-shadow: 0 1px 6px rgba(0,0,0,.12); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); border: 1px solid var(--line); font-size: 15px; padding: 9px 16px; }
+  .btn-ghost:hover { background: #f0ede6; }
+  .btn-danger { background: var(--red-soft); color: var(--red); font-size: 15px; padding: 9px 16px; }
+  .btn-danger:hover { background: #f6dada; }
+
+  /* 登入區 */
+  #loginView { text-align: center; padding: 50px 28px; }
+  #loginView .big { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  #loginView .sub { color: var(--ink-soft); margin-bottom: 30px; font-size: 16px; }
+
+  /* 拒絕區 */
+  #denyView { text-align: center; padding: 44px 28px; }
+  #denyView .icon { font-size: 46px; margin-bottom: 12px; }
+  #denyView .big { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  #denyView .sub { color: var(--ink-soft); margin-bottom: 26px; }
+
+  /* 已登入列 */
+  .who {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 22px;
+    background: var(--accent-soft); border-radius: 12px; padding: 14px 18px;
+  }
+  .who .label { font-size: 14px; color: var(--accent-dark); font-weight: 500; }
+  .who .email { font-weight: 700; }
+
+  label.field { display: block; margin-bottom: 16px; }
+  label.field .name { display: block; font-size: 15px; font-weight: 500; margin-bottom: 7px; }
+  label.field .hint { font-weight: 400; color: var(--ink-soft); font-size: 13px; }
+  input[type=text], input[type=email], input[type=date], input[type=number], select {
+    width: 100%; font-family: inherit; font-size: 17px;
+    padding: 13px 15px; border: 1px solid var(--line); border-radius: 11px;
+    background: #fcfbf8; color: var(--ink);
+  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); background: #fff; }
+
+  .row2 { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row2 > * { flex: 1; min-width: 200px; }
+
+  .found {
+    margin: -6px 0 16px; font-size: 15px; padding: 11px 15px;
+    border-radius: 11px; display: none;
+  }
+  .found.ok { display: block; background: var(--green-soft); color: var(--green); }
+  .found.no { display: block; background: var(--red-soft); color: var(--red); }
+
+  #typeExtra > div { display: none; }
+  #typeExtra > div.show { display: block; }
+
+  .msg { padding: 13px 16px; border-radius: 11px; font-size: 15px; margin-top: 14px; display: none; }
+  .msg.show { display: block; }
+  .msg.ok { background: var(--green-soft); color: var(--green); }
+  .msg.err { background: var(--red-soft); color: var(--red); }
+
+  /* 清單 */
+  .listItem {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--line);
+  }
+  .listItem:last-child { border-bottom: none; }
+  .listItem .info .name { font-weight: 700; font-size: 17px; }
+  .listItem .info .meta { font-size: 14px; color: var(--ink-soft); margin-top: 2px; }
+  .pill {
+    display: inline-block; font-size: 13px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px; margin-right: 6px;
+  }
+  .pill.grant { background: var(--accent-soft); color: var(--accent-dark); }
+  .pill.free  { background: var(--green-soft); color: var(--green); }
+  .pill.pro   { background: #fff3df; color: var(--amber); }
+  .pill.trial { background: #e7f0fb; color: #2f6fb0; }
+  .pill.discount { background: #fdeede; color: var(--amber); }
+  .empty { text-align: center; color: var(--ink-soft); padding: 28px 0; }
+
+  .spin { text-align: center; color: var(--ink-soft); padding: 30px 0; }
+  .hidden { display: none !important; }
+  .foot { text-align: center; color: var(--ink-soft); font-size: 13px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="logo">愛</div>
+    <div>
+      <h1>白名單管理</h1>
+      <p>愛傳時 · 特殊帳號後台</p>
+    </div>
+  </header>
+
+  <!-- 載入中 -->
+  <div id="bootView" class="card spin">載入中…</div>
+
+  <!-- 登入 -->
+  <div id="loginView" class="card hidden">
+    <div class="big">請先登入</div>
+    <div class="sub">這個頁面只有管理員可以使用</div>
+    <button id="btnLogin" class="btn btn-google">
+      <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 5.1 29.5 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 7.1 29.5 5 24 5 16 5 9.1 9.5 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 36 26.7 37 24 37c-5.3 0-9.7-2.6-11.3-7l-6.5 5C9.1 40.4 16 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.5l6.2 5.2C40.9 35.7 44 30.4 44 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
+      使用 Google 登入
+    </button>
+  </div>
+
+  <!-- 非管理員 -->
+  <div id="denyView" class="card hidden">
+    <div class="icon">🔒</div>
+    <div class="big">你不是管理員</div>
+    <div class="sub" id="denyEmail"></div>
+    <button id="btnLogout1" class="btn btn-ghost">換一個帳號登入</button>
+  </div>
+
+  <!-- 管理介面 -->
+  <div id="adminView" class="hidden">
+
+    <div class="who">
+      <div>
+        <span class="label">管理員：</span>
+        <span class="email" id="adminEmail"></span>
+      </div>
+      <button id="btnLogout2" class="btn btn-ghost">登出</button>
+    </div>
+
+    <!-- 新增 -->
+    <div class="card">
+      <h2>新增 / 修改特殊帳號</h2>
+
+      <label class="field">
+        <span class="name">對方的 Email <span class="hint">（輸入後按「查詢」找出這個人）</span></span>
+        <div class="row2">
+          <input type="email" id="searchEmail" placeholder="example@gmail.com">
+          <button id="btnSearch" class="btn btn-primary" style="flex:0 0 auto;">查詢</button>
+        </div>
+      </label>
+      <div id="foundBox" class="found"></div>
+
+      <label class="field">
+        <span class="name">給這個人什麼待遇</span>
+        <select id="typeSelect">
+          <option value="grant">贈送指定等級（自己選 Lite / Plus / Pro）</option>
+          <option value="trial">限時試用（全功能，到期自動結束）</option>
+          <option value="discount">折扣優惠（功能不開，只給折扣）</option>
+          <option value="free">永久免費（全功能全開）</option>
+        </select>
+      </label>
+
+      <div id="typeExtra">
+        <div id="extraGrant" class="show">
+          <label class="field">
+            <span class="name">贈送等級</span>
+            <select id="tierSelect">
+              <option value="lite">Lite 輕量版（每月 50 則）</option>
+              <option value="plus">Plus 進階版（每月 200 則）</option>
+              <option value="pro">Pro 專業版（每月 500 則）</option>
+            </select>
+          </label>
+        </div>
+        <div id="extraTrial">
+          <label class="field">
+            <span class="name">試用到期日 <span class="hint">（這天之後自動失效）</span></span>
+            <input type="date" id="expireInput">
+          </label>
+        </div>
+        <div id="extraDiscount">
+          <label class="field">
+            <span class="name">折扣百分比 <span class="hint">（例如填 50 代表打五折）</span></span>
+            <input type="number" id="discountInput" min="1" max="99" placeholder="50">
+          </label>
+        </div>
+      </div>
+
+      <button id="btnSave" class="btn btn-primary" style="width:100%; margin-top:6px;" disabled>請先查詢出對方帳號</button>
+      <div id="saveMsg" class="msg"></div>
+    </div>
+
+    <!-- 清單 -->
+    <div class="card">
+      <h2>目前白名單 <span id="countTag" style="font-size:15px;color:var(--ink-soft);font-weight:400;"></span></h2>
+      <div id="listBox"><div class="spin">載入中…</div></div>
+    </div>
+
+  </div>
+
+  <div class="foot">愛傳時 TimedMessenger · 內部管理工具</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  // ====== 設定 ======
+  const firebaseConfig = {
+    apiKey: "AIzaSyAlk65p0FVo72NVdpN8mWRKrz99_a6B1RA",
+    authDomain: "timed-messenger-app-8263f.firebaseapp.com",
+    projectId: "timed-messenger-app-8263f",
+    storageBucket: "timed-messenger-app-8263f.firebasestorage.app",
+    messagingSenderId: "718181282115",
+    appId: "1:718181282115:web:81bca05861e934263cbff6",
+    measurementId: "G-H4TX651K5C"
+  };
+  const ADMIN_UID = "GJujZdCHQqWy49Prl53IC1XAvSH3";
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // ====== 畫面切換 ======
+  const $ = (id) => document.getElementById(id);
+  const views = {
+    boot: $("bootView"), login: $("loginView"),
+    deny: $("denyView"), admin: $("adminView"),
+  };
+  function show(name) {
+    Object.values(views).forEach(v => v.classList.add("hidden"));
+    views[name].classList.remove("hidden");
+  }
+
+  let selectedUid = null;
+  let selectedEmail = null;
+
+  // ====== 登入狀態 ======
+  auth.onAuthStateChanged((user) => {
+    if (!user) { show("login"); return; }
+    if (user.uid === ADMIN_UID) {
+      $("adminEmail").textContent = user.email || "（無 email）";
+      show("admin");
+      loadList();
+    } else {
+      $("denyEmail").textContent = "目前登入：" + (user.email || "");
+      show("deny");
+    }
+  });
+
+  $("btnLogin").onclick = () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => alert("登入失敗：" + e.message));
+  };
+  $("btnLogout1").onclick = () => auth.signOut();
+  $("btnLogout2").onclick = () => auth.signOut();
+
+  // ====== 類型切換,顯示對應欄位 ======
+  $("typeSelect").onchange = function () {
+    const t = this.value;
+    $("extraGrant").classList.toggle("show", t === "grant");
+    $("extraTrial").classList.toggle("show", t === "trial");
+    $("extraDiscount").classList.toggle("show", t === "discount");
+  };
+
+  // ====== 用 Email 查詢對方帳號 ======
+  $("btnSearch").onclick = async () => {
+    const email = $("searchEmail").value.trim().toLowerCase();
+    const box = $("foundBox");
+    selectedUid = null; selectedEmail = null;
+    setSaveReady(false);
+    if (!email) { box.className = "found no"; box.textContent = "請先輸入 Email"; return; }
+    box.className = "found"; box.style.display = "block"; box.textContent = "查詢中…";
+    try {
+      const snap = await db.collection("users").where("email", "==", email).limit(1).get();
+      if (snap.empty) {
+        box.className = "found no";
+        box.textContent = "❌ 找不到這個 Email。請確認對方已經用這個 Google 帳號登入過 App。";
+        return;
+      }
+      const doc = snap.docs[0];
+      selectedUid = doc.id;
+      selectedEmail = doc.data().email || email;
+      const name = doc.data().displayName || "(未設定名稱)";
+      box.className = "found ok";
+      box.textContent = "✅ 找到了：" + name + "（" + selectedEmail + "）";
+      setSaveReady(true);
+    } catch (e) {
+      box.className = "found no";
+      box.textContent = "查詢失敗：" + e.message;
+    }
+  };
+
+  function setSaveReady(ready) {
+    const btn = $("btnSave");
+    btn.disabled = !ready;
+    btn.textContent = ready ? "儲存到白名單" : "請先查詢出對方帳號";
+  }
+
+  // 改 Email 就要重查
+  $("searchEmail").oninput = () => {
+    selectedUid = null; selectedEmail = null;
+    $("foundBox").style.display = "none";
+    setSaveReady(false);
+  };
+
+  // ====== 儲存 ======
+  $("btnSave").onclick = async () => {
+    if (!selectedUid) return;
+    const type = $("typeSelect").value;
+    const data = { type: type };
+
+    if (type === "grant") {
+      data.tier = $("tierSelect").value;
+    } else if (type === "trial") {
+      const d = $("expireInput").value;
+      if (!d) return showSave("err", "請選擇試用到期日");
+      data.expireAt = firebase.firestore.Timestamp.fromDate(new Date(d + "T23:59:59"));
+    } else if (type === "discount") {
+      const n = parseInt($("discountInput").value, 10);
+      if (!n || n < 1 || n > 99) return showSave("err", "折扣請填 1 到 99 的數字");
+      data.discount = n;
+    }
+
+    try {
+      await db.collection("special_accounts").doc(selectedUid).set(data);
+      showSave("ok", "✅ 已儲存：" + selectedEmail);
+      // 清空表單
+      $("searchEmail").value = "";
+      $("foundBox").style.display = "none";
+      selectedUid = null; selectedEmail = null;
+      setSaveReady(false);
+      loadList();
+    } catch (e) {
+      showSave("err", "儲存失敗：" + e.message);
+    }
+  };
+
+  function showSave(kind, text) {
+    const m = $("saveMsg");
+    m.className = "msg show " + kind;
+    m.textContent = text;
+    setTimeout(() => { m.className = "msg"; }, 5000);
+  }
+
+  // ====== 載入清單 ======
+  async function loadList() {
+    const box = $("listBox");
+    box.innerHTML = '<div class="spin">載入中…</div>';
+    try {
+      const snap = await db.collection("special_accounts").get();
+      if (snap.empty) {
+        $("countTag").textContent = "（0 筆）";
+        box.innerHTML = '<div class="empty">目前白名單裡沒有任何帳號</div>';
+        return;
+      }
+      $("countTag").textContent = "（" + snap.size + " 筆）";
+      const rows = [];
+      for (const doc of snap.docs) {
+        const d = doc.data();
+        let email = doc.id, name = "";
+        try {
+          const u = await db.collection("users").doc(doc.id).get();
+          if (u.exists) { email = u.data().email || doc.id; name = u.data().displayName || ""; }
+        } catch (_) {}
+        rows.push(renderRow(doc.id, name, email, d));
+      }
+      box.innerHTML = rows.join("");
+      // 綁定刪除
+      box.querySelectorAll("[data-del]").forEach(b => {
+        b.onclick = () => deleteAccount(b.getAttribute("data-del"), b.getAttribute("data-email"));
+      });
+    } catch (e) {
+      box.innerHTML = '<div class="empty">載入失敗：' + e.message + '</div>';
+    }
+  }
+
+  function renderRow(uid, name, email, d) {
+    let pill = "", extra = "";
+    switch (d.type) {
+      case "grant":
+        const tierName = { lite: "Lite 輕量版", plus: "Plus 進階版", pro: "Pro 專業版" }[d.tier] || d.tier;
+        pill = '<span class="pill grant">贈送等級</span>'; extra = tierName; break;
+      case "free":
+        pill = '<span class="pill free">永久免費</span>'; extra = "全功能全開"; break;
+      case "pro":
+        pill = '<span class="pill pro">贈送 Pro</span>'; extra = "全功能全開"; break;
+      case "trial":
+        pill = '<span class="pill trial">限時試用</span>';
+        if (d.expireAt && d.expireAt.toDate) {
+          const dt = d.expireAt.toDate();
+          const expired = dt < new Date();
+          extra = (expired ? "⚠️ 已到期 " : "到期日 ") + dt.toLocaleDateString("zh-TW");
+        } else { extra = "無到期日"; }
+        break;
+      case "discount":
+        pill = '<span class="pill discount">折扣</span>'; extra = (d.discount || "?") + "% off"; break;
+      default:
+        pill = '<span class="pill">' + (d.type || "?") + '</span>';
+    }
+    const title = name ? name : email;
+    const sub = name ? email : uid;
+    return '<div class="listItem"><div class="info">' +
+      '<div class="name">' + esc(title) + '</div>' +
+      '<div class="meta">' + pill + esc(extra) + ' · ' + esc(sub) + '</div>' +
+      '</div><button class="btn btn-danger" data-del="' + uid + '" data-email="' + esc(email) + '">刪除</button></div>';
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  async function deleteAccount(uid, email) {
+    if (!confirm("確定要把「" + email + "」從白名單移除嗎?\n移除後對方會變回一般帳號。")) return;
+    try {
+      await db.collection("special_accounts").doc(uid).delete();
+      loadList();
+    } catch (e) {
+      alert("刪除失敗：" + e.message);
+    }
+  }
+</script>
+</body>
+</html>
